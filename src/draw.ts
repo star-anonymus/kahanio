@@ -1,11 +1,13 @@
 // Draws one video frame on a canvas: background (stock clip or our animated gradient), captions, end card.
 import { BRAND } from "./brand.ts";
 import { clamp01, easeInOutCubic, easeOutBack, easeOutCubic, segmentFills } from "./ease.ts";
+import { paintStyle, type StyleId } from "./styles.ts";
 import { type Caption, wrapWords } from "./timing.ts";
 
 const C = BRAND.colors;
+export const URDU_FONT = '"Noto Nastaliq Urdu", "Segoe UI", sans-serif';
 export const FONT = '"Poppins", "Segoe UI", system-ui, sans-serif';
-const RTL = /[֐-ࣿ]/;
+export const RTL = /[֐-ࣿ]/;
 
 export type Frame = {
   w: number;
@@ -19,9 +21,11 @@ export type Frame = {
   clip: HTMLVideoElement | null;
   captions: Caption[];
   aiLabel: boolean;
+  style?: StyleId;
+  topic?: string;
 };
 
-function cover(ctx: CanvasRenderingContext2D, v: HTMLVideoElement, w: number, h: number, zoom: number) {
+export function cover(ctx: CanvasRenderingContext2D, v: HTMLVideoElement, w: number, h: number, zoom: number) {
   const vw = v.videoWidth || w;
   const vh = v.videoHeight || h;
   const s = Math.max(w / vw, h / vh) * zoom;
@@ -30,7 +34,7 @@ function cover(ctx: CanvasRenderingContext2D, v: HTMLVideoElement, w: number, h:
   ctx.drawImage(v, (w - dw) / 2, (h - dh) / 2, dw, dh);
 }
 
-function gradientBackground(ctx: CanvasRenderingContext2D, w: number, h: number, t: number, i: number) {
+export function gradientBackground(ctx: CanvasRenderingContext2D, w: number, h: number, t: number, i: number) {
   ctx.fillStyle = C.ink;
   ctx.fillRect(0, 0, w, h);
   const blobs = [
@@ -66,10 +70,10 @@ function drawCaption(ctx: CanvasRenderingContext2D, f: Frame) {
   ctx.shadowColor = "rgba(0,0,0,0.45)";
   ctx.shadowBlur = size * 0.35;
   ctx.shadowOffsetY = size * 0.06;
-  ctx.font = `800 ${size}px ${FONT}`;
+  const rtl = RTL.test(cap.text);
+  ctx.font = rtl ? `700 ${Math.round(size * 0.8)}px ${URDU_FONT}` : `800 ${size}px ${FONT}`;
   ctx.textBaseline = "middle";
   ctx.lineJoin = "round";
-  const rtl = RTL.test(cap.text);
   const maxW = f.w * 0.84;
   const lines = rtl ? [[cap.text]] : wrapWords(cap.words.map((w) => w.w.toUpperCase()), maxW, (s) => ctx.measureText(s).width);
   const lh = size * 1.18;
@@ -117,7 +121,9 @@ function drawCaption(ctx: CanvasRenderingContext2D, f: Frame) {
 export function drawScene(ctx: CanvasRenderingContext2D, f: Frame) {
   const { w, h } = f;
   const local = (f.t - f.sceneStart) / Math.max(0.001, f.sceneEnd - f.sceneStart);
-  if (f.clip) {
+  const style = f.style ?? "story";
+  if (style !== "story") paintStyle(style, ctx, f, local);
+  else if (f.clip) {
     ctx.fillStyle = "#000";
     ctx.fillRect(0, 0, w, h);
     cover(ctx, f.clip, w, h, 1 + 0.06 * local);
@@ -133,24 +139,27 @@ export function drawScene(ctx: CanvasRenderingContext2D, f: Frame) {
   const unit = Math.min(w, h);
   const since = f.t - f.sceneStart;
 
-  sceneNumber(ctx, f, unit, since);
-  drawCaption(ctx, f);
-  if (f.sceneIndex > 0 && since < 0.5) wipe(ctx, w, h, since / 0.5);
+  if (style === "story") {
+    sceneNumber(ctx, f, unit, since);
+    drawCaption(ctx, f);
+    if (f.sceneIndex > 0 && since < 0.5) wipe(ctx, w, h, since / 0.5);
+  }
 
   // Story-style progress: one segment per scene.
   const m = unit * 0.04;
   const gap = unit * 0.012;
   const bh = Math.max(3, unit * 0.007);
   const fills = segmentFills(f.sceneCount, f.sceneIndex, local);
+  const lightBg = style === "clean" && !f.clip;
   const segW = (w - m * 2 - gap * (fills.length - 1)) / fills.length;
   fills.forEach((fill, i) => {
     const x = m + i * (segW + gap);
-    ctx.fillStyle = "rgba(255,255,255,0.28)";
+    ctx.fillStyle = lightBg ? "rgba(20,20,43,0.14)" : "rgba(255,255,255,0.28)";
     ctx.beginPath();
     ctx.roundRect(x, m, segW, bh, bh / 2);
     ctx.fill();
     if (fill > 0) {
-      ctx.fillStyle = i === f.sceneIndex ? C.coral : "#fff";
+      ctx.fillStyle = i === f.sceneIndex ? C.coral : lightBg ? C.ink : "#fff";
       ctx.beginPath();
       ctx.roundRect(x, m, Math.max(bh, segW * fill), bh, bh / 2);
       ctx.fill();
@@ -176,7 +185,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, f: Frame) {
   }
 }
 
-function dotGrid(ctx: CanvasRenderingContext2D, w: number, h: number, t: number) {
+export function dotGrid(ctx: CanvasRenderingContext2D, w: number, h: number, t: number) {
   const step = Math.min(w, h) * 0.055;
   const r = Math.max(1, step * 0.045);
   const drift = (t * step * 0.15) % step;
@@ -212,7 +221,7 @@ function sceneNumber(ctx: CanvasRenderingContext2D, f: Frame, unit: number, sinc
 }
 
 /** Brand wipe between scenes: a coral band with an amber edge sweeps across on a slant. */
-function wipe(ctx: CanvasRenderingContext2D, w: number, h: number, p: number) {
+export function wipe(ctx: CanvasRenderingContext2D, w: number, h: number, p: number) {
   const e = easeInOutCubic(p);
   const band = w * 0.55;
   const skew = h * 0.35;

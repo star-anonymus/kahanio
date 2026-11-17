@@ -3,7 +3,7 @@ import type { Job } from "./main.ts";
 import { parseScript } from "./script.ts";
 
 type RunJob = (job: Job, onProgress: (f: number, label: string) => void) => Promise<{ blob: Blob; seconds: number; warnings: string[] }>;
-type Sample = { script: string; format: Job["format"]; seed: number };
+type Sample = { script: string; format: Job["format"]; seed: number; style?: Job["style"]; topic?: string };
 
 declare global {
   interface Window {
@@ -18,7 +18,7 @@ export async function autorun(runJob: RunJob) {
   try {
     const sample = (await (await fetch(`/__sample?name=${name}`)).json()) as Sample;
     const res = await runJob(
-      { scenes: parseScript(sample.script), format: sample.format, music: true, aiLabel: true, keys: {}, seed: sample.seed },
+      { scenes: parseScript(sample.script), format: sample.format, music: true, aiLabel: true, keys: {}, seed: sample.seed, style: sample.style, topic: sample.topic },
       (f, label) => (window.__devStatus = `${label} ${Math.round(f * 100)}%`),
     );
     const r = await fetch(`/__save?name=${name}`, { method: "POST", body: res.blob });

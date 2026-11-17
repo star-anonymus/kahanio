@@ -1,4 +1,5 @@
 // Renders the whole video in the visitor's browser with WebCodecs (through Mediabunny) into an MP4. No server.
+import type { StyleId } from "./styles.ts";
 import { AudioBufferSource, BufferTarget, CanvasSource, Mp4OutputFormat, Output, QUALITY_HIGH, QUALITY_MEDIUM, canEncodeAudio, canEncodeVideo } from "mediabunny";
 import { buildSoundtrack } from "./audio.ts";
 import { drawEndCard, drawScene } from "./draw.ts";
@@ -18,6 +19,8 @@ export type RenderJob = {
   voice?: AudioBuffer;
   music: boolean;
   aiLabel: boolean;
+  style?: StyleId;
+  topic?: string;
   seed: number;
 };
 export type RenderResult = { blob: Blob; srt: string; credits: string[]; seconds: number; warnings: string[] };
@@ -132,6 +135,8 @@ export async function renderVideo(job: RenderJob, onProgress: (fraction: number,
         clip,
         captions: captions[i],
         aiLabel: job.aiLabel,
+        style: job.style,
+        topic: job.topic,
       });
     } else drawEndCard(ctx, w, h, t - body, credits, job.aiLabel);
     await vsrc.add(t, 1 / FPS);

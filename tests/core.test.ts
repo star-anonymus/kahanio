@@ -136,11 +136,12 @@ test("buildMessages asks for facts-only JSON in the chosen language", () => {
 test("every sample script parses into 5-6 scenes with keywords", () => {
   const dir = new URL("../samples/", import.meta.url);
   const files = readdirSync(dir).filter((f) => f.endsWith(".json"));
-  assert.equal(files.length, 3);
+  assert.ok(files.length >= 4);
   for (const f of files) {
     const s = JSON.parse(readFileSync(new URL(f, dir), "utf8"));
     const scenes = parseScript(s.script);
     assert.ok(scenes.length >= 5 && scenes.length <= 6, f);
+    assert.ok(["story", "pop", "clean", "neon", "chat", "news"].includes(s.style), f);
     assert.ok(scenes.every((x) => x.keywords.length > 0), f);
   }
 });
@@ -162,4 +163,14 @@ test("easing curves start at 0, end at 1, and clamp", async () => {
   }
   assert.ok(easeOutBack(0.7) > 1, "overshoots");
   assert.deepEqual(segmentFills(4, 2, 0.5), [1, 1, 0.5, 0]);
+});
+
+test("templates and goals are complete and their starters parse", async () => {
+  const { TEMPLATES, GOALS, sampleScenes } = await import("../src/templates.ts");
+  assert.equal(new Set(TEMPLATES.map((t) => t.id)).size, 6);
+  for (const t of TEMPLATES) assert.ok(sampleScenes(t).length >= 3, t.id);
+  for (const g of GOALS) {
+    assert.ok(TEMPLATES.some((t) => t.id === g.style), g.id);
+    assert.ok(parseScript(g.starter("cold email").join("\n")).length >= 4, g.id);
+  }
 });

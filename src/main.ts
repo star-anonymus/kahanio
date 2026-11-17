@@ -1,10 +1,12 @@
 import { decodeVoice } from "./audio.ts";
+import type { StyleId } from "./styles.ts";
 import { BRAND } from "./brand.ts";
 import { FONT } from "./draw.ts";
 import { PROVIDERS, type ScriptLang, writeScript } from "./llm.ts";
 import { type Format, browserCanRender, renderVideo } from "./render.ts";
 import { type Scene, parseScript, scenesToText, templateScript } from "./script.ts";
 import { type Clip, findClip } from "./stock.ts";
+import { buildGallery, buildStylePicker } from "./gallery.ts";
 import { startPreview } from "./preview.ts";
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -15,6 +17,8 @@ export type Job = {
   voice?: AudioBuffer;
   music: boolean;
   aiLabel: boolean;
+  style?: StyleId;
+  topic?: string;
   keys: { pexels?: string; pixabay?: string };
   seed: number;
 };
@@ -79,21 +83,61 @@ function init() {
     };
   });
 
-  // Live preview in the phone frame; follows the script, format and label as they change.
+  // Live preview in the phone frame; follows the script, template, format and label as they change.
   const fmtValue = () => (document.querySelector('input[name="fmt"]:checked') as HTMLInputElement).value as Format;
   const phone = $("phone");
-  document.querySelectorAll<HTMLInputElement>('input[name="fmt"]').forEach((r) => {
-    r.onchange = () => {
-      phone.classList.toggle("tall", fmtValue() === "9:16");
-      phone.classList.toggle("wide", fmtValue() === "16:9");
+  const syncPhone = () => {
+    phone.classList.toggle("tall", fmtValue() === "9:16");
+    phone.classList.toggle("wide", fmtValue() === "16:9");
+  };
+  const setFormat = (f: Format) => {
+    (document.querySelector(`input[name="fmt"][value="${f}"]`) as HTMLInputElement).checked = true;
+    syncPhone();
+  };
+  document.querySelectorAll<HTMLInputElement>('input[name="fmt"]').forEach((r) => (r.onchange = syncPhone));
+  let style: StyleId = "story";
+  const syncPicker = buildStylePicker(
+    () => style,
+    (id) => (style = id),
+  );
+  const goMake = () => document.getElementById("make")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  buildGallery(
+    (id) => {
+      style = id;
+      syncPicker();
+      goMake();
+    },
+    (g) => {
+      style = g.style;
+      syncPicker();
+      setFormat(g.format);
+      scriptBox.value = g.starter(topicBox.value.trim() || "your topic").join("\n");
+      goMake();
+    },
+  );
+  $("heroForm").onsubmit = (e) => {
+    e.preventDefault();
+    const t = $<HTMLInputElement>("heroTopic").value.trim();
+    if (!t) return;
+    topicBox.value = t;
+    if (!scriptBox.value.trim()) scriptBox.value = scenesToText(templateScript(t));
+    goMake();
+  };
+  document.querySelectorAll<HTMLButtonElement>("[data-hero-topic]").forEach((b) => {
+    b.onclick = () => {
+      $<HTMLInputElement>("heroTopic").value = b.dataset.heroTopic ?? "";
+      $<HTMLFormElement>("heroForm").requestSubmit();
     };
   });
   startPreview($<HTMLCanvasElement>("live"), () => {
     const typed = parseScript(scriptBox.value);
+    const topic = topicBox.value.trim() || "your topic";
     return {
-      scenes: typed.length ? typed : templateScript(topicBox.value.trim() || "your topic"),
+      scenes: typed.length ? typed : templateScript(topic),
       format: fmtValue(),
       aiLabel: $<HTMLInputElement>("aiLabel").checked,
+      style,
+      topic,
     };
   });
   const showVideo = (on: boolean) => {
@@ -186,6 +230,8 @@ function init() {
         voice,
         music: $<HTMLInputElement>("music").checked,
         aiLabel: $<HTMLInputElement>("aiLabel").checked,
+        style,
+        topic: topicBox.value.trim(),
         keys: { pexels: $<HTMLInputElement>("pexelsKey").value.trim() || undefined, pixabay: $<HTMLInputElement>("pixabayKey").value.trim() || undefined },
         seed: Math.floor(Math.random() * 1e9),
       };

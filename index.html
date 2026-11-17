@@ -30,31 +30,49 @@
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;800&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@600;700&family=Poppins:wght@500;600;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
     <div class="glow" aria-hidden="true"></div>
     <header class="top wrap">
       <a class="brand" href="/"><img src="/logo-mark.svg" alt="" width="38" height="38" /><span>kahanio</span></a>
+      <nav class="nav"><a href="#templates">Templates</a><a href="#goals-sec">Ideas</a><a href="#make">Make a video</a></nav>
       <a class="maker" href="https://clientorahq.com" target="_blank" rel="noopener">by <strong>ClientoraHQ</strong></a>
     </header>
 
     <main class="wrap">
       <section class="hero">
-        <p class="eyebrow">Free AI reel maker</p>
-        <h1>Turn any topic into a <span class="hl">short video</span>.</h1>
-        <p class="lead">Script, word-by-word captions, footage and music for a vertical reel or a widescreen video, in English or Urdu. It all happens in your browser.</p>
-        <ul class="chips">
-          <li>Free, no watermark</li>
-          <li>No sign-up</li>
-          <li>Nothing uploaded</li>
-          <li>English + اردو</li>
-        </ul>
+        <p class="eyebrow">Free AI video templates</p>
+        <h1>Type a topic.<br />Get a <span class="hl">ready-to-post reel</span>.</h1>
+        <p class="lead">Pick a template, add your words, and download an MP4 with captions and music. Free, in your browser, English and اردو.</p>
+        <form id="heroForm" class="searchbar" role="search">
+          <span class="sb-ico" aria-hidden="true">✦</span>
+          <input id="heroTopic" maxlength="140" placeholder="What is your video about?" aria-label="Video topic" />
+          <button type="submit" class="primary">Make video</button>
+        </form>
+        <div class="chips">
+          <button type="button" class="chip-btn" data-hero-topic="How to find your first freelance client">First freelance client</button>
+          <button type="button" class="chip-btn" data-hero-topic="Cold email tips that get replies">Cold email tips</button>
+          <button type="button" class="chip-btn" data-hero-topic="Why every local shop needs a website">Shops need a website</button>
+        </div>
+        <ul class="trust"><li>Free, no watermark</li><li>No sign-up</li><li>Nothing uploaded</li></ul>
+      </section>
+
+      <section id="templates" class="sec">
+        <div class="sec-head"><h2>Templates</h2><p>Every preview below is live, drawn the same way your video will be.</p></div>
+        <div id="gallery" class="bento"></div>
+      </section>
+
+      <section id="goals-sec" class="sec">
+        <div class="sec-head"><h2>Start from an idea</h2><p>Each one picks a template and writes a starter script for you to edit.</p></div>
+        <div id="goals" class="goals"></div>
       </section>
 
       <p id="unsupported" class="alert" hidden>This browser cannot make videos. Please use a recent Chrome, Edge or Safari on a computer.</p>
 
+      <section id="make" class="sec">
+      <div class="sec-head"><h2>Make your video</h2><p>Edit your script and watch the preview change.</p></div>
       <div class="app">
         <form id="form" class="card steps">
           <section class="step">
@@ -86,11 +104,13 @@
             <button type="button" id="draft" class="ghost small">✦ Get script</button>
 
             <label for="script">Script <span class="hint">one scene per line, optional search words in [brackets]</span></label>
-            <textarea id="script" rows="7" placeholder="Clients are already asking for your service online. [laptop, office]"></textarea>
+            <textarea id="script" dir="auto" rows="7" placeholder="Clients are already asking for your service online. [laptop, office]"></textarea>
           </section>
 
           <section class="step">
             <h2><span class="n">2</span> Look</h2>
+            <p class="hint">Template</p>
+            <div id="stylePicker" class="style-picker" role="group" aria-label="Template"></div>
             <div class="seg" role="radiogroup" aria-label="Video format">
               <label><input type="radio" name="fmt" value="9:16" checked /><span><i class="ico tall"></i>9:16 vertical</span></label>
               <label><input type="radio" name="fmt" value="16:9" /><span><i class="ico wide"></i>16:9 widescreen</span></label>
@@ -145,6 +165,7 @@
           </section>
         </aside>
       </div>
+      </section>
 
       <section class="tips">
         <h2>Post it the right way</h2>
