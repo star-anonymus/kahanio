@@ -1,0 +1,18 @@
+# Kahanio
+
+> Kahanio is a free AI reel maker by ClientoraHQ. Type a topic or script and get a short video (9:16 or 16:9 MP4) with word-by-word captions, an AI voice in English, Urdu or Hindi, music made for each video and real stock footage from Pexels. It runs in the browser, needs no sign-up and puts no watermark over the video; a short end card credits the footage.
+
+## Facts
+- Price: free. No account needed.
+- Templates: Story, Bold Pop, Clean, Neon Night, Chat, Cartoon (a 2D presenter with lip-sync), Headline.
+- Voices: English (on-device and online), Urdu (Uzma, Asad), Hindi (Swara, Madhur); Hindi letters can be spoken by an Urdu voice; or the user's own recording.
+- Captions: word by word; Urdu in Nastaliq. A .srt file is included.
+- Photos: users can add photos that move with slow 3D camera motion.
+- Privacy: the video is made in the browser; only scene text is sent for online voices.
+- Source code: GPL-3.0, https://github.com/star-anonymus/kahanio
+- Made by ClientoraHQ (https://clientorahq.com), which finds clients for freelancers and agencies.
+
+## Guides
+- [Urdu reel maker](https://kahanio.clientorahq.com/urdu-reel-maker)
+- [Topic to video](https://kahanio.clientorahq.com/topic-to-video)
+- [Free AI short video generator](https://kahanio.clientorahq.com/ai-short-video-generator)

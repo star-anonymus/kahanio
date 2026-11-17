@@ -33,4 +33,6 @@ function devSamples(): Plugin {
 // cross-origin fonts, models and stock clips loading. Production hosting must send the same two headers (see vercel.json).
 const isolation = { "Cross-Origin-Opener-Policy": "same-origin", "Cross-Origin-Embedder-Policy": "credentialless" };
 
-export default defineConfig({ plugins: [devSamples()], server: { headers: isolation }, preview: { headers: isolation } });
+const pages = Object.fromEntries(["index", "urdu-reel-maker", "topic-to-video", "ai-short-video-generator"].map((p) => [p, join(__dirname, `${p}.html`)]));
+
+export default defineConfig({ build: { rollupOptions: { input: pages } }, plugins: [devSamples()], server: { headers: isolation }, preview: { headers: isolation } });

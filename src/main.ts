@@ -1,4 +1,5 @@
 import { decodeVoice } from "./audio.ts";
+import { TEMPLATES } from "./templates.ts";
 import { findStockClip, onlineAvailable, StockUnavailable } from "./tts.ts";
 import { setupVoice } from "./voice-ui.ts";
 import { type CharacterId, CHARACTERS, DEFAULT_CHARACTER } from "./cartoon.ts";
@@ -139,6 +140,24 @@ function init() {
   );
   const syncPicker = () => (stylePicker(), syncChars());
   syncChars();
+  // Presets from guide pages, e.g. /?lang=ur&template=clean#make
+  {
+    const q = new URLSearchParams(location.search);
+    const t = q.get("template");
+    if (t && TEMPLATES.some((x) => x.id === t)) {
+      style = t as StyleId;
+      syncPicker();
+    }
+    const l = q.get("lang");
+    if (l && ["en", "ur", "hiur", "hi"].includes(l)) {
+      const vl = document.getElementById("voiceLang") as HTMLSelectElement;
+      vl.value = l;
+      vl.dispatchEvent(new Event("change"));
+      const ai = document.querySelector('input[name="vmode"][value="ai"]') as HTMLInputElement;
+      ai.checked = true;
+      ai.dispatchEvent(new Event("change"));
+    }
+  }
   const goMake = () => document.getElementById("make")?.scrollIntoView({ behavior: "smooth", block: "start" });
   buildGallery(
     (id) => {

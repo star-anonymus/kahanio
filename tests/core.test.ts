@@ -330,3 +330,21 @@ test("worker stock: search words are cleaned; only Pexels video files can be str
   assert.equal(isPexelsVideoUrl("https://videos.pexels.com.evil.example/a.mp4"), false);
   assert.equal(isPexelsVideoUrl("https://videos.pexels.com/a.html"), false);
 });
+
+test("SEO guide pages: titles under 60, descriptions under 160, one H1, FAQ in schema, in the sitemap", async () => {
+  const { GUIDES } = await import("../scripts/build-guides.mjs");
+  const sitemap = readFileSync(new URL("../public/sitemap.xml", import.meta.url), "utf8");
+  const llms = readFileSync(new URL("../public/llms.txt", import.meta.url), "utf8");
+  for (const g of GUIDES as { slug: string; title: string; description: string; faq: string[][]; answer: string }[]) {
+    assert.ok(g.title.length < 60, g.title);
+    assert.ok(g.description.length < 160, g.slug);
+    const words = g.answer.split(/\s+/).length;
+    assert.ok(words >= 40 && words <= 65, `${g.slug} answer ${words} words`);
+    const html = readFileSync(new URL(`../${g.slug}.html`, import.meta.url), "utf8");
+    assert.equal(html.match(/<h1[ >]/g)?.length, 1, g.slug);
+    assert.match(html, /"@type":"FAQPage"/);
+    assert.ok(g.faq.every(([q]) => html.includes(q.replace(/&/g, "&amp;"))), g.slug);
+    assert.ok(sitemap.includes(`/${g.slug}<`) && llms.includes(`/${g.slug})`), g.slug);
+    assert.doesNotMatch(html, /reelora|moneyprinter/i);
+  }
+});
