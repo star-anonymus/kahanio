@@ -1,10 +1,12 @@
-// AI voice: Azure neural voices (Urdu + English) through our Worker, and Kokoro (English) on the visitor's device.
+// AI voice: FameSpeak free voices (Urdu + English) through our Worker, and Kokoro (English) on the visitor's device.
+// Text in Hindi script is converted to Urdu script before an Urdu voice speaks it (captions keep the Hindi).
 // Each scene is spoken separately, so captions match the voice exactly.
-import { AZURE_VOICES } from "../worker/core.ts";
+import { ONLINE_VOICES } from "../worker/core.ts";
+import { devanagariToUrdu, hasDevanagari } from "./translit.ts";
 import type { Scene } from "./script.ts";
 
-export type VoiceEngine = "azure" | "kokoro";
-export type VoiceOption = { engine: VoiceEngine; id: string; lang: "en" | "ur"; label: string };
+export type VoiceEngine = "online" | "kokoro";
+export type VoiceOption = { engine: VoiceEngine; id: string; lang: "en" | "ur" | "hi"; label: string };
 
 export const KOKORO_VOICES: VoiceOption[] = [
   { engine: "kokoro", id: "af_heart", lang: "en", label: "Heart (US, female)" },
@@ -14,16 +16,18 @@ export const KOKORO_VOICES: VoiceOption[] = [
   { engine: "kokoro", id: "bf_emma", lang: "en", label: "Emma (UK, female)" },
   { engine: "kokoro", id: "bm_george", lang: "en", label: "George (UK, male)" },
 ];
-export const AZURE_OPTIONS: VoiceOption[] = AZURE_VOICES.map((v) => ({ engine: "azure", id: v.id, lang: v.lang, label: v.label }));
+export const ONLINE_OPTIONS: VoiceOption[] = ONLINE_VOICES.map((v) => ({ engine: "online", id: v.id, lang: v.lang, label: v.label }));
 
 const TTS_URL = (import.meta.env.VITE_TTS_URL as string | undefined)?.replace(/\/$/, "") ?? "";
 const SITEKEY = (import.meta.env.VITE_TURNSTILE_SITEKEY as string | undefined) ?? "";
-export const azureAvailable = () => !!TTS_URL && !!SITEKEY;
+export const onlineAvailable = () => !!TTS_URL && !!SITEKEY;
 
-/** Voices offered for a language: Azure first when the Worker is configured; Kokoro for English always. */
-export function voicesFor(lang: "en" | "ur"): VoiceOption[] {
-  const az = azureAvailable() ? AZURE_OPTIONS.filter((v) => v.lang === lang) : [];
-  return lang === "ur" ? az : [...az, ...KOKORO_VOICES];
+/** Voice languages offered in step 3. "hiur" = Hindi script spoken by an Urdu voice. Kokoro covers English always. */
+export type VoiceLang = "en" | "ur" | "hiur" | "hi";
+export function voicesFor(lang: VoiceLang): VoiceOption[] {
+  const want = lang === "hiur" ? "ur" : lang;
+  const online = onlineAvailable() ? ONLINE_OPTIONS.filter((v) => v.lang === want) : [];
+  return want === "en" ? [...online, ...KOKORO_VOICES] : online;
 }
 
 export const GAP_SEC = 0.25;
@@ -51,7 +55,7 @@ function loadKokoro(onStatus: (s: string) => void): Promise<Kokoro> {
   return kokoro;
 }
 
-// ---- Azure (through the Worker) ----
+// ---- FameSpeak (through the Worker) ----
 let session: { token: string; exp: number } | null = null;
 
 function turnstileToken(): Promise<string> {
@@ -77,7 +81,7 @@ function turnstileToken(): Promise<string> {
   });
 }
 
-async function azureSession(): Promise<string> {
+async function onlineSession(): Promise<string> {
   if (session && session.exp > Date.now() + 30000) return session.token;
   const token = await turnstileToken();
   const r = await fetch(`${TTS_URL}/session`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ turnstile: token }) });
@@ -89,13 +93,25 @@ async function azureSession(): Promise<string> {
 
 export class QuotaError extends Error {}
 
-async function azureScene(text: string, voice: string): Promise<ArrayBuffer> {
-  const r = await fetch(`${TTS_URL}/tts`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, voice, session: await azureSession() }) });
-  if (r.ok) return r.arrayBuffer();
-  const j = (await r.json().catch(() => ({}))) as { error?: string; quota?: boolean };
-  if (r.status === 401) session = null;
-  if (j.quota) throw new QuotaError(j.error ?? "The free AI voice is used up for now.");
-  throw new Error(j.error ?? `The voice service did not answer (HTTP ${r.status}). Press Retry.`);
+/** One scene through the Worker. Waits and retries while the voice service is busy (it makes one voice at a time). */
+async function onlineScene(text: string, voice: string, onStatus: (s: string) => void): Promise<ArrayBuffer> {
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const r = await fetch(`${TTS_URL}/tts`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, voice, session: await onlineSession() }) });
+    if (r.ok) return r.arrayBuffer();
+    const j = (await r.json().catch(() => ({}))) as { error?: string; busy?: boolean; quota?: boolean };
+    if (r.status === 401 && attempt === 0) {
+      session = null;
+      continue;
+    }
+    if (j.busy) {
+      onStatus("Many people are making voices right now. Waiting for your turn…");
+      await new Promise((res) => setTimeout(res, 3000 * (attempt + 1)));
+      continue;
+    }
+    if (j.quota) throw new QuotaError(j.error ?? "The online voice is not available right now.");
+    throw new Error(j.error ?? `The voice service did not answer (HTTP ${r.status}). Press Retry.`);
+  }
+  throw new QuotaError("The online voice is very busy right now.");
 }
 
 // ---- Joining scenes ----
@@ -118,15 +134,17 @@ export async function speakScenes(scenes: Scene[], voice: VoiceOption, onStatus:
   let note: string | undefined;
   for (let i = 0; i < scenes.length; i++) {
     onStatus(`AI voice ${i + 1}/${scenes.length}…`);
-    if (engine === "azure") {
+    if (engine === "online") {
+      // Urdu voices read Urdu script: convert Hindi-script text first (the captions keep what the user wrote).
+      const text = voice.lang === "ur" && hasDevanagari(scenes[i].text) ? devanagariToUrdu(scenes[i].text) : scenes[i].text;
       try {
-        parts.push(await toBuffer(decodeCtx, await azureScene(scenes[i].text, voice.id)));
+        parts.push(await toBuffer(decodeCtx, await onlineScene(text, voice.id, onStatus)));
         continue;
       } catch (e) {
-        // When the free Azure quota is used up, English falls back to the on-device voice. Urdu has no fallback.
+        // When the online voice is unavailable or too busy, English falls back to the on-device voice. Urdu has no fallback.
         if (!(e instanceof QuotaError) || voice.lang !== "en") throw e;
         engine = "kokoro";
-        note = "The online voice is used up for now, so this video uses the free on-device voice.";
+        note = "The online voice was busy, so this video uses the free on-device voice.";
         parts.length = 0;
         i = -1;
         continue;

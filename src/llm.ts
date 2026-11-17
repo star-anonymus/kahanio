@@ -9,18 +9,19 @@ export const PROVIDERS: Provider[] = [
   { id: "openrouter", name: "OpenRouter (free models)", baseURL: "https://openrouter.ai/api/v1", model: "openrouter/free", keyUrl: "https://openrouter.ai/settings/keys", note: "50 free requests a day. Some free models log prompts." },
 ];
 
-export type ScriptLang = "en" | "ur";
+export type ScriptLang = "en" | "ur" | "hi";
 
 export function buildMessages(topic: string, lang: ScriptLang, seconds: number) {
   const scenes = Math.max(4, Math.min(10, Math.round(seconds / 5)));
-  const language = lang === "ur" ? "Urdu in Urdu script" : "simple English";
+  const language = lang === "ur" ? "Urdu in Urdu script" : lang === "hi" ? "everyday spoken Urdu (Hindustani) written in Hindi Devanagari script" : "simple English";
   return [
     {
       role: "system",
       content:
         "You write scripts for short vertical videos. Facts only: never invent numbers, quotes, prices or studies. " +
         'No hashtags, no emojis. Reply with JSON only: {"scenes":[{"text":"...","keywords":["...","..."]}]}. ' +
-        'keywords are 1-3 English words for searching stock video (things a camera can film, e.g. "laptop office").',
+        'keywords are 1-3 English words for searching stock video (things a camera can film, e.g. "laptop office"). ' +
+        'If the script greets the viewer, use the Islamic greeting "Assalam o Alaikum" (in the script of the chosen language), never another greeting.',
     },
     {
       role: "user",

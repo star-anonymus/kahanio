@@ -1,31 +1,22 @@
-// Pure parts of the Kahanio voice Worker (Azure neural TTS proxy). Tested in Node; no Cloudflare types needed.
+// Pure parts of the Kahanio voice Worker (FameSpeak free-voice proxy). Tested in Node; no Cloudflare types needed.
 
-export type AzureVoice = { id: string; lang: "en" | "ur"; label: string };
+export type OnlineVoice = { id: string; lang: "en" | "ur" | "hi"; label: string; fsId: string };
 
-/** Only these voices can be requested (keeps the free quota for what the site offers). */
-export const AZURE_VOICES: AzureVoice[] = [
-  { id: "ur-PK-UzmaNeural", lang: "ur", label: "Uzma (Urdu, female)" },
-  { id: "ur-PK-AsadNeural", lang: "ur", label: "Asad (Urdu, male)" },
-  { id: "en-US-AvaNeural", lang: "en", label: "Ava (US, female)" },
-  { id: "en-US-AndrewNeural", lang: "en", label: "Andrew (US, male)" },
-  { id: "en-GB-SoniaNeural", lang: "en", label: "Sonia (UK, female)" },
-  { id: "en-GB-RyanNeural", lang: "en", label: "Ryan (UK, male)" },
+/** FameSpeak free voices (no credits). Only these can be requested. */
+export const ONLINE_VOICES: OnlineVoice[] = [
+  { id: "ur-uzma", lang: "ur", label: "Uzma (Urdu, female)", fsId: "fs_voice_9d9edf25712584d15d09" },
+  { id: "ur-asad", lang: "ur", label: "Asad (Urdu, male)", fsId: "fs_voice_78271f9f85daeffd9291" },
+  { id: "hi-swara", lang: "hi", label: "Swara (Hindi, female)", fsId: "fs_voice_ca3c966d0b7284655bb2" },
+  { id: "hi-madhur", lang: "hi", label: "Madhur (Hindi, male)", fsId: "fs_voice_677d98c1ff2aa996b4c4" },
+  { id: "en-ava", lang: "en", label: "Ava (US, female)", fsId: "fs_voice_d1db4bca4b762fc387be" },
+  { id: "en-andrew", lang: "en", label: "Andrew (US, male)", fsId: "fs_voice_edd943a5f6396d24a8c4" },
+  { id: "en-emma", lang: "en", label: "Emma (US, female)", fsId: "fs_voice_ba59c0a1e557b17c8318" },
+  { id: "en-brian", lang: "en", label: "Brian (US, male)", fsId: "fs_voice_77a11b336a8871de26b1" },
 ];
 
 export const MAX_CHARS = 600;
 export const SESSION_SECONDS = 15 * 60;
-export const OUTPUT_FORMAT = "audio-16khz-128kbitrate-mono-mp3";
-
-export function escapeXml(s: string): string {
-  return s.replace(/[<>&'"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", "'": "&apos;", '"': "&quot;" })[c]!);
-}
-
-export function buildSsml(text: string, voiceId: string): string {
-  const v = AZURE_VOICES.find((x) => x.id === voiceId);
-  if (!v) throw new Error("unknown voice");
-  const lang = voiceId.slice(0, 5);
-  return `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="${lang}"><voice name="${v.id}">${escapeXml(text)}</voice></speak>`;
-}
+export const FAMESPEAK_API = "https://famespeak.online/api/v1";
 
 export type TtsRequest = { text: string; voice: string; session: string };
 
@@ -36,7 +27,7 @@ export function validateTts(body: unknown): TtsRequest | { error: string } {
   const text = typeof b.text === "string" ? b.text.replace(/\s+/g, " ").trim() : "";
   if (!text) return { error: "The scene has no text." };
   if (text.length > MAX_CHARS) return { error: `A scene can have at most ${MAX_CHARS} characters for the AI voice.` };
-  if (typeof b.voice !== "string" || !AZURE_VOICES.some((v) => v.id === b.voice)) return { error: "Unknown voice." };
+  if (typeof b.voice !== "string" || !ONLINE_VOICES.some((v) => v.id === b.voice)) return { error: "Unknown voice." };
   if (typeof b.session !== "string" || b.session.length > 400) return { error: "Missing session. Reload the page and try again." };
   return { text, voice: b.voice, session: b.session };
 }

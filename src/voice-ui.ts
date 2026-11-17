@@ -1,6 +1,6 @@
-// Step 3 voice controls: no voice, AI voice (Azure online or Kokoro on device), or the user's own voice.
+// Step 3 voice controls: no voice, AI voice (FameSpeak online or Kokoro on device), or the user's own voice.
 import type { Scene } from "./script.ts";
-import { azureAvailable, type SpokenScript, speakScenes, type VoiceOption, voicesFor } from "./tts.ts";
+import { onlineAvailable, type SpokenScript, speakScenes, type VoiceLang, type VoiceOption, voicesFor } from "./tts.ts";
 
 export type VoiceMode = "none" | "ai" | "mine";
 
@@ -14,11 +14,11 @@ export function setupVoice(getScenes: () => Scene[]) {
   let options: VoiceOption[] = [];
 
   const fill = () => {
-    options = voicesFor(lang.value as "en" | "ur");
+    options = voicesFor(lang.value as VoiceLang);
     pick.innerHTML = "";
-    for (const v of options) pick.add(new Option(`${v.label}${v.engine === "azure" ? " · online" : " · on your device"}`, `${v.engine}:${v.id}`));
+    for (const v of options) pick.add(new Option(`${v.label}${v.engine === "online" ? " · online" : " · on your device"}`, `${v.engine}:${v.id}`));
     if (!options.length) {
-      pick.add(new Option("Urdu AI voice is coming soon. Use your own voice for Urdu.", ""));
+      pick.add(new Option("This AI voice is coming soon. Use your own voice for now.", ""));
       pick.disabled = true;
     } else pick.disabled = false;
     hint();
@@ -28,8 +28,10 @@ export function setupVoice(getScenes: () => Scene[]) {
     const c = choice();
     $("voiceHint").textContent = !c
       ? ""
-      : c.engine === "azure"
-        ? "Natural online voice (Microsoft Azure). Only your script text is sent to make the audio; nothing is stored."
+      : c.engine === "online"
+        ? lang.value === "hiur"
+          ? "Write in Hindi letters; an Urdu voice speaks it in Urdu style. Captions stay in Hindi. Only your script text is sent to make the audio; nothing is stored."
+          : "Natural online voice. Only your script text is sent to make the audio; nothing is stored."
         : "Free voice that runs on your device. The first time it downloads about 92 MB, then works offline.";
   };
   const sync = () => {
@@ -39,7 +41,7 @@ export function setupVoice(getScenes: () => Scene[]) {
   document.querySelectorAll<HTMLInputElement>('input[name="vmode"]').forEach((r) => (r.onchange = sync));
   lang.onchange = fill;
   pick.onchange = hint;
-  if (azureAvailable()) (document.querySelector('input[name="vmode"][value="ai"]') as HTMLInputElement).checked = true;
+  if (onlineAvailable()) (document.querySelector('input[name="vmode"][value="ai"]') as HTMLInputElement).checked = true;
   fill();
   sync();
 

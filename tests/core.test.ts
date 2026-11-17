@@ -260,18 +260,35 @@ test("voice: scene spans follow measured durations exactly", async () => {
   assert.deepEqual(spansFromDurations([1.5, 2, 0.5]), [{ start: 0, end: 1.5 }, { start: 1.5, end: 3.5 }, { start: 3.5, end: 4 }]);
 });
 
-test("worker: SSML is escaped and only allowed voices pass", async () => {
-  const { buildSsml, validateTts, AZURE_VOICES, MAX_CHARS } = await import("../worker/core.ts");
-  const ssml = buildSsml(`Tom & "Jerry" <b>`, "en-US-AvaNeural");
-  assert.match(ssml, /xml:lang="en-US"/);
-  assert.match(ssml, /Tom &amp; &quot;Jerry&quot; &lt;b&gt;/);
-  assert.throws(() => buildSsml("x", "en-US-Nobody"));
-  assert.ok(AZURE_VOICES.some((v) => v.lang === "ur") && AZURE_VOICES.some((v) => v.lang === "en"));
-  assert.deepEqual(validateTts({ text: "  hi  there ", voice: "ur-PK-UzmaNeural", session: "s" }), { text: "hi there", voice: "ur-PK-UzmaNeural", session: "s" });
-  assert.ok("error" in validateTts({ text: "x".repeat(MAX_CHARS + 1), voice: "ur-PK-UzmaNeural", session: "s" }));
-  assert.ok("error" in validateTts({ text: "hi", voice: "evil", session: "s" }));
-  assert.ok("error" in validateTts({ text: "", voice: "ur-PK-UzmaNeural", session: "s" }));
+test("worker: only allowed FameSpeak free voices pass, text is cleaned and capped", async () => {
+  const { validateTts, ONLINE_VOICES, MAX_CHARS } = await import("../worker/core.ts");
+  assert.ok(ONLINE_VOICES.some((v) => v.lang === "ur") && ONLINE_VOICES.some((v) => v.lang === "en"));
+  assert.ok(ONLINE_VOICES.every((v) => /^fs_voice_[0-9a-f]{20}$/.test(v.fsId)));
+  assert.equal(new Set(ONLINE_VOICES.map((v) => v.id)).size, ONLINE_VOICES.length);
+  assert.deepEqual(validateTts({ text: "  hi  there ", voice: "ur-uzma", session: "s" }), { text: "hi there", voice: "ur-uzma", session: "s" });
+  assert.ok("error" in validateTts({ text: "x".repeat(MAX_CHARS + 1), voice: "ur-uzma", session: "s" }));
+  assert.ok("error" in validateTts({ text: "hi", voice: "fs_voice_9d9edf25712584d15d09", session: "s" }), "raw FameSpeak ids are not accepted");
+  assert.ok("error" in validateTts({ text: "", voice: "ur-uzma", session: "s" }));
   assert.ok("error" in validateTts(null));
+});
+
+test("Hindi script converts to Urdu script for the Urdu voice", async () => {
+  const { devanagariToUrdu, hasDevanagari } = await import("../src/translit.ts");
+  const cases: [string, string][] = [
+    ["है", "ہے"], ["हैं", "ہیں"], ["में", "میں"], ["नहीं", "نہیں"], ["आप", "آپ"], ["क्या", "کیا"], ["एक", "ایک"],
+    ["वेबसाइट", "ویبسائٹ"], ["आइए", "آئیے"], ["जाओ", "جاؤ"], ["ज़िंदगी", "زندگی"], ["ख़ुश", "خش"], ["कहानी", "کہانی"],
+    ["लोग", "لوگ"], ["पूछते", "پوچھتے"], ["करें", "کریں"], ["देंगे", "دینگے"], ["टॉपिक", "ٹاپک"],
+  ];
+  for (const [hi, ur] of cases) assert.equal(devanagariToUrdu(hi), ur, hi);
+  assert.equal(devanagariToUrdu("सलाम! क्या हाल है?"), "سلام! کیا ہال ہے؟"); // ہال and حال sound the same
+  assert.equal(devanagariToUrdu("Kahanio में।"), "Kahanio میں۔");
+  assert.equal(hasDevanagari("hello"), false);
+  assert.equal(hasDevanagari("hello है"), true);
+});
+
+test("Hindi-script videos use the Urdu voices; script writer asks for Devanagari", async () => {
+  const { buildMessages } = await import("../src/llm.ts");
+  assert.match(buildMessages("cold email", "hi", 30)[1].content, /Devanagari/);
 });
 
 test("worker: session tokens are signed, IP-bound and expire", async () => {
@@ -290,4 +307,14 @@ test("worker: CORS answers only allowed origins", async () => {
   const allowed = "https://kahanio.clientorahq.com,http://localhost:4830";
   assert.equal(corsHeaders("http://localhost:4830", allowed)["Access-Control-Allow-Origin"], "http://localhost:4830");
   assert.equal(corsHeaders("https://evil.example", allowed)["Access-Control-Allow-Origin"], "https://kahanio.clientorahq.com");
+});
+
+test("voice languages: English, Urdu, Hindi script with Urdu voice, and Hindi; greetings are Islamic", async () => {
+  const { ONLINE_VOICES } = await import("../worker/core.ts");
+  for (const l of ["en", "ur", "hi"]) assert.ok(ONLINE_VOICES.some((v) => v.lang === l), l);
+  const { buildMessages } = await import("../src/llm.ts");
+  assert.match(buildMessages("x", "en", 30)[0].content, /Assalam o Alaikum/);
+  const { TEMPLATES, GOALS } = await import("../src/templates.ts");
+  const all = [...TEMPLATES.flatMap((t) => t.sample), ...GOALS.flatMap((g) => g.starter("topic"))].join(" ");
+  assert.doesNotMatch(all, /\b(Salaam|Namaste|Hello)\b|नमस्ते/);
 });
