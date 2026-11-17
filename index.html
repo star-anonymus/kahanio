@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Reelora: free topic to short video maker</title>
+    <meta name="description" content="Type a topic, get a 9:16 or 16:9 MP4 with script, captions, footage and music. Free, made in your browser, nothing uploaded. By ClientoraHQ." />
+    <link rel="icon" href="/logo-mark.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <header class="top">
+      <a class="brand" href="/"><img src="/logo-mark.svg" alt="" width="36" height="36" /><span data-brand-name>Reelora</span></a>
+      <a class="maker" href="https://clientorahq.com" target="_blank" rel="noopener">by ClientoraHQ</a>
+    </header>
+
+    <main>
+      <section class="hero">
+        <h1>Topic in. Short video out.</h1>
+        <p>Script, captions, footage and music, made in your browser. Free, no sign-up, nothing uploaded to us.</p>
+      </section>
+
+      <p id="unsupported" class="alert" hidden>This browser cannot make videos. Please use a recent Chrome, Edge or Safari on a computer.</p>
+
+      <form id="form" class="card">
+        <label>Topic
+          <input id="topic" required maxlength="140" placeholder="e.g. How freelancers can find their first client" />
+        </label>
+
+        <fieldset>
+          <legend>Script</legend>
+          <label class="radio"><input type="radio" name="src" value="own" checked /> I'll write it (best for YouTube: your own words)</label>
+          <label class="radio"><input type="radio" name="src" value="ai" /> Write it with a free AI (your own free key)</label>
+          <label class="radio"><input type="radio" name="src" value="template" /> Quick starter, no AI</label>
+        </fieldset>
+
+        <div id="aiBox" class="sub" hidden>
+          <label>Provider <select id="provider"></select></label>
+          <p class="hint" id="providerNote"></p>
+          <label>API key <input id="aiKey" type="password" autocomplete="off" placeholder="Stays in this tab only" /></label>
+          <label>Language <select id="lang"><option value="en">English</option><option value="ur">Urdu</option></select></label>
+          <label>Length <select id="seconds"><option value="20">About 20 s</option><option value="30" selected>About 30 s</option><option value="45">About 45 s</option></select></label>
+        </div>
+
+        <div class="row">
+          <button type="button" id="draft" class="ghost">Get script</button>
+        </div>
+        <label>Script: one scene per line. Optional search words in [brackets].
+          <textarea id="script" rows="7" placeholder="Clients are already asking for your service online. [laptop, office]"></textarea>
+        </label>
+
+        <fieldset>
+          <legend>Video</legend>
+          <label class="radio"><input type="radio" name="fmt" value="9:16" checked /> 9:16 (Shorts, Reels, TikTok)</label>
+          <label class="radio"><input type="radio" name="fmt" value="16:9" /> 16:9 (YouTube)</label>
+        </fieldset>
+
+        <details class="sub">
+          <summary>Stock footage (optional, free keys)</summary>
+          <p class="hint">Without a key, scenes use our animated background. Get a free key from <a href="https://www.pexels.com/api/" target="_blank" rel="noopener">Pexels</a> or <a href="https://pixabay.com/api/docs/" target="_blank" rel="noopener">Pixabay</a>. Keys stay in this tab.</p>
+          <label>Pexels key <input id="pexelsKey" type="password" autocomplete="off" /></label>
+          <label>Pixabay key <input id="pixabayKey" type="password" autocomplete="off" /></label>
+        </details>
+
+        <fieldset>
+          <legend>Voice and sound</legend>
+          <label>Your voice (optional): upload a recording <input id="voiceFile" type="file" accept="audio/*" /></label>
+          <div class="row"><button type="button" id="rec" class="ghost">● Record my voice</button><span id="recState" class="hint"></span></div>
+          <label class="radio"><input type="checkbox" id="music" checked /> Background music (made fresh for each video)</label>
+          <label class="radio"><input type="checkbox" id="aiLabel" checked /> Show an "AI-assisted" label</label>
+        </fieldset>
+
+        <button type="submit" id="go" class="primary">Make my video</button>
+      </form>
+
+      <section id="status" class="card" hidden>
+        <p id="statusText"></p>
+        <progress id="bar" max="1" value="0"></progress>
+        <p id="error" class="alert" hidden></p>
+        <div class="row"><button type="button" id="retry" class="ghost" hidden>Retry</button><button type="button" id="stop" class="ghost">Stop</button></div>
+        <ul id="warnings" class="hint"></ul>
+      </section>
+
+      <section id="result" class="card" hidden>
+        <video id="preview" controls playsinline></video>
+        <div class="row">
+          <a id="download" class="primary" download="video.mp4">Download MP4</a>
+          <a id="srt" class="ghost" download="captions.srt">Captions (.srt)</a>
+        </div>
+        <p class="hint">Paste this in your video description:</p>
+        <textarea id="credits" rows="3" readonly></textarea>
+      </section>
+
+      <section class="card note">
+        <h2>Before you post on YouTube</h2>
+        <ul>
+          <li>YouTube's monetisation rules leave out "inauthentic" content: mass-produced, repetitive videos with no personal touch. Add your own voice, your own opinion or your own footage.</li>
+          <li>Turn on YouTube's "altered or synthetic content" setting when a video could look real.</li>
+          <li>Keep the footage credits in the description. Pexels and Pixabay clips are free to use, but never sell them on their own.</li>
+        </ul>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <p><span data-brand-name>Reelora</span> is a free tool from the makers of <a href="https://clientorahq.com" target="_blank" rel="noopener">ClientoraHQ</a>, which finds clients for freelancers and agencies.</p>
+      <p class="hint">Inspired by the open-source MoneyPrinterTurbo (MIT). Our own code. Videos are encoded with Mediabunny (MPL-2.0).</p>
+    </footer>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

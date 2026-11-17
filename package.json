@@ -1,0 +1,21 @@
+{
+  "name": "clientorahq-video-tool",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 4830",
+    "build": "vite build",
+    "preview": "vite preview --port 4831",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test tests/"
+  },
+  "dependencies": {
+    "mediabunny": "1.66.0"
+  },
+  "devDependencies": {
+    "@types/node": "20.19.43",
+    "typescript": "5.9.3",
+    "vite": "8.3.8"
+  }
+}
