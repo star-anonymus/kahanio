@@ -4,3 +4,4 @@ samples-out/
 *.log
 photo-out/
 dev-photos/
+*.local
