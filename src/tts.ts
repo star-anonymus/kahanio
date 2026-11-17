@@ -58,7 +58,7 @@ function loadKokoro(onStatus: (s: string) => void): Promise<Kokoro> {
 // ---- FameSpeak (through the Worker) ----
 let session: { token: string; exp: number } | null = null;
 
-function turnstileToken(): Promise<string> {
+function turnstileToken(onStatus: (s: string) => void): Promise<string> {
   return new Promise((resolve, reject) => {
     const run = () => {
       const w = window as unknown as { turnstile?: { render(el: HTMLElement, o: Record<string, unknown>): string } };
@@ -70,10 +70,17 @@ function turnstileToken(): Promise<string> {
       }
       box.innerHTML = "";
       // Never hang: stop after one failure or 25 seconds, with a reason the visitor can read.
-      const timer = setTimeout(() => reject(new Error("The bot check took too long. Press Retry.")), 25000);
+      let timer = setTimeout(() => reject(new Error("The bot check took too long. Press Retry.")), 25000);
       w.turnstile!.render(box, {
         sitekey: SITEKEY,
         retry: "never",
+        // When Cloudflare wants a human click, say so and give the visitor time to do it.
+        "before-interactive-callback": () => {
+          clearTimeout(timer);
+          timer = setTimeout(() => reject(new Error("The bot check was not completed. Press Retry.")), 120000);
+          onStatus("Quick check: tick the box below to continue.");
+          box!.scrollIntoView({ block: "center", behavior: "smooth" });
+        },
         callback: (t: string) => (clearTimeout(timer), resolve(t)),
         "error-callback": (code: string) => {
           clearTimeout(timer);
@@ -91,9 +98,9 @@ function turnstileToken(): Promise<string> {
   });
 }
 
-async function onlineSession(): Promise<string> {
+async function onlineSession(onStatus: (s: string) => void): Promise<string> {
   if (session && session.exp > Date.now() + 30000) return session.token;
-  const token = await turnstileToken();
+  const token = await turnstileToken(onStatus);
   const r = await fetch(`${TTS_URL}/session`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ turnstile: token }) });
   const j = (await r.json().catch(() => ({}))) as { session?: string; error?: string };
   if (!r.ok || !j.session) throw new Error(j.error ?? "Could not start the voice session. Press Retry.");
@@ -106,7 +113,7 @@ export class QuotaError extends Error {}
 /** One scene through the Worker. Waits and retries while the voice service is busy (it makes one voice at a time). */
 async function onlineScene(text: string, voice: string, onStatus: (s: string) => void): Promise<ArrayBuffer> {
   for (let attempt = 0; attempt < 6; attempt++) {
-    const r = await fetch(`${TTS_URL}/tts`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, voice, session: await onlineSession() }) });
+    const r = await fetch(`${TTS_URL}/tts`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, voice, session: await onlineSession(onStatus) }) });
     if (r.ok) return r.arrayBuffer();
     const j = (await r.json().catch(() => ({}))) as { error?: string; busy?: boolean; quota?: boolean };
     if (r.status === 401 && attempt === 0) {
