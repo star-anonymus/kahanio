@@ -5,6 +5,7 @@ import { PROVIDERS, type ScriptLang, writeScript } from "./llm.ts";
 import { type Format, browserCanRender, renderVideo } from "./render.ts";
 import { type Scene, parseScript, scenesToText, templateScript } from "./script.ts";
 import { type Clip, findClip } from "./stock.ts";
+import { startPreview } from "./preview.ts";
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -56,13 +57,53 @@ function init() {
   const srcValue = () => (document.querySelector('input[name="src"]:checked') as HTMLInputElement).value;
   document.querySelectorAll<HTMLInputElement>('input[name="src"]').forEach((r) => {
     r.onchange = () => {
-      $("aiBox").hidden = srcValue() !== "ai";
-      $("draft").hidden = srcValue() === "own";
+      const v = srcValue();
+      $("aiBox").hidden = v !== "ai";
+      $("draft").hidden = v === "own";
+      $("srcHint").textContent =
+        v === "own"
+          ? "Your own words work best: platforms favour original voices."
+          : v === "ai"
+            ? "Uses a free AI tier with your own key. Always read and fix the script before you post."
+            : "A simple five-scene starter. Make it yours before you post.";
     };
   });
   $("draft").hidden = true;
 
   const scriptBox = $<HTMLTextAreaElement>("script");
+  const topicBox = $<HTMLInputElement>("topic");
+  document.querySelectorAll<HTMLButtonElement>("[data-topic]").forEach((b) => {
+    b.onclick = () => {
+      topicBox.value = b.dataset.topic ?? "";
+      if (!scriptBox.value.trim()) scriptBox.value = scenesToText(templateScript(topicBox.value));
+    };
+  });
+
+  // Live preview in the phone frame; follows the script, format and label as they change.
+  const fmtValue = () => (document.querySelector('input[name="fmt"]:checked') as HTMLInputElement).value as Format;
+  const phone = $("phone");
+  document.querySelectorAll<HTMLInputElement>('input[name="fmt"]').forEach((r) => {
+    r.onchange = () => {
+      phone.classList.toggle("tall", fmtValue() === "9:16");
+      phone.classList.toggle("wide", fmtValue() === "16:9");
+    };
+  });
+  startPreview($<HTMLCanvasElement>("live"), () => {
+    const typed = parseScript(scriptBox.value);
+    return {
+      scenes: typed.length ? typed : templateScript(topicBox.value.trim() || "your topic"),
+      format: fmtValue(),
+      aiLabel: $<HTMLInputElement>("aiLabel").checked,
+    };
+  });
+  const showVideo = (on: boolean) => {
+    $("live").hidden = on;
+    $("preview").hidden = !on;
+    $("liveHint").textContent = on ? "Your finished video." : "Live preview. Edit the script and watch it change.";
+    if (!on) $<HTMLVideoElement>("preview").pause();
+  };
+  $("back").onclick = () => showVideo(false);
+
   const draftBtn = $<HTMLButtonElement>("draft");
   draftBtn.onclick = async () => {
     const topic = $<HTMLInputElement>("topic").value.trim();
@@ -85,7 +126,7 @@ function init() {
       alert((e as Error).message);
     } finally {
       draftBtn.disabled = false;
-      draftBtn.textContent = "Get script";
+      draftBtn.textContent = "✦ Get script";
     }
   };
 
@@ -126,6 +167,7 @@ function init() {
     const errBox = $("error");
     $("status").hidden = false;
     $("result").hidden = true;
+    showVideo(false);
     errBox.hidden = true;
     $("retry").hidden = true;
     $("warnings").innerHTML = "";
@@ -171,6 +213,7 @@ function init() {
       $("warnings").innerHTML = res.warnings.map((w) => `<li>${w.replace(/</g, "&lt;")}</li>`).join("");
       $("statusText").textContent = `Done: ${Math.round(res.seconds)} seconds.`;
       $("result").hidden = false;
+      showVideo(true);
     } catch (e) {
       errBox.textContent = (e as Error).message || "Something went wrong.";
       errBox.hidden = false;

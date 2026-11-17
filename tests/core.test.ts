@@ -152,3 +152,14 @@ test("site copy and metadata use our own name only, and target generic searches"
   for (const k of ["free AI reel maker", "topic to video", "AI short video generator free", "Urdu reel maker"]) assert.ok(html.includes(k), k);
   assert.match(html, /kahanio\.clientorahq\.com/);
 });
+
+test("easing curves start at 0, end at 1, and clamp", async () => {
+  const { easeOutCubic, easeInOutCubic, easeOutBack, segmentFills } = await import("../src/ease.ts");
+  for (const f of [easeOutCubic, easeInOutCubic, easeOutBack]) {
+    assert.ok(Math.abs(f(0)) < 1e-9);
+    assert.ok(Math.abs(f(1) - 1) < 1e-9);
+    assert.equal(f(5), f(1));
+  }
+  assert.ok(easeOutBack(0.7) > 1, "overshoots");
+  assert.deepEqual(segmentFills(4, 2, 0.5), [1, 1, 0.5, 0]);
+});

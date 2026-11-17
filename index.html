@@ -34,101 +34,131 @@
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
-    <header class="top">
-      <a class="brand" href="/"><img src="/logo-mark.svg" alt="" width="36" height="36" /><span>kahanio</span></a>
-      <a class="maker" href="https://clientorahq.com" target="_blank" rel="noopener">by ClientoraHQ</a>
+    <div class="glow" aria-hidden="true"></div>
+    <header class="top wrap">
+      <a class="brand" href="/"><img src="/logo-mark.svg" alt="" width="38" height="38" /><span>kahanio</span></a>
+      <a class="maker" href="https://clientorahq.com" target="_blank" rel="noopener">by <strong>ClientoraHQ</strong></a>
     </header>
 
-    <main>
+    <main class="wrap">
       <section class="hero">
-        <h1>Free AI reel maker: topic in, short video out.</h1>
-        <p>Script, captions, footage and music for a vertical reel or a widescreen video, in English or Urdu. Made in your browser: free, no sign-up, nothing uploaded to us.</p>
+        <p class="eyebrow">Free AI reel maker</p>
+        <h1>Turn any topic into a <span class="hl">short video</span>.</h1>
+        <p class="lead">Script, word-by-word captions, footage and music for a vertical reel or a widescreen video, in English or Urdu. It all happens in your browser.</p>
+        <ul class="chips">
+          <li>Free, no watermark</li>
+          <li>No sign-up</li>
+          <li>Nothing uploaded</li>
+          <li>English + اردو</li>
+        </ul>
       </section>
 
       <p id="unsupported" class="alert" hidden>This browser cannot make videos. Please use a recent Chrome, Edge or Safari on a computer.</p>
 
-      <form id="form" class="card">
-        <label>Topic
-          <input id="topic" required maxlength="140" placeholder="e.g. How freelancers can find their first client" />
-        </label>
+      <div class="app">
+        <form id="form" class="card steps">
+          <section class="step">
+            <h2><span class="n">1</span> Topic and script</h2>
+            <label for="topic">What is your video about?</label>
+            <input id="topic" required maxlength="140" placeholder="e.g. How freelancers can find their first client" />
+            <div class="examples" aria-label="Example topics">
+              <button type="button" class="chip-btn" data-topic="How to find your first freelance client">First freelance client</button>
+              <button type="button" class="chip-btn" data-topic="Cold email tips that get replies">Cold email tips</button>
+              <button type="button" class="chip-btn" data-topic="Why every local shop needs a website">Shops need a website</button>
+            </div>
 
-        <fieldset>
-          <legend>Script</legend>
-          <label class="radio"><input type="radio" name="src" value="own" checked /> I'll write it (best for YouTube: your own words)</label>
-          <label class="radio"><input type="radio" name="src" value="ai" /> Write it with a free AI (your own free key)</label>
-          <label class="radio"><input type="radio" name="src" value="template" /> Quick starter, no AI</label>
-        </fieldset>
+            <div class="seg" role="radiogroup" aria-label="Script source">
+              <label><input type="radio" name="src" value="own" checked /><span>I'll write it</span></label>
+              <label><input type="radio" name="src" value="ai" /><span>Free AI</span></label>
+              <label><input type="radio" name="src" value="template" /><span>Quick starter</span></label>
+            </div>
+            <p class="hint" id="srcHint">Your own words work best: platforms favour original voices.</p>
 
-        <div id="aiBox" class="sub" hidden>
-          <label>Provider <select id="provider"></select></label>
-          <p class="hint" id="providerNote"></p>
-          <label>API key <input id="aiKey" type="password" autocomplete="off" placeholder="Stays in this tab only" /></label>
-          <label>Language <select id="lang"><option value="en">English</option><option value="ur">Urdu</option></select></label>
-          <label>Length <select id="seconds"><option value="20">About 20 s</option><option value="30" selected>About 30 s</option><option value="45">About 45 s</option></select></label>
+            <div id="aiBox" class="sub" hidden>
+              <div class="grid2">
+                <label>Provider <select id="provider"></select></label>
+                <label>API key <input id="aiKey" type="password" autocomplete="off" placeholder="Stays in this tab" /></label>
+                <label>Language <select id="lang"><option value="en">English</option><option value="ur">Urdu (اردو)</option></select></label>
+                <label>Length <select id="seconds"><option value="20">About 20 s</option><option value="30" selected>About 30 s</option><option value="45">About 45 s</option></select></label>
+              </div>
+              <p class="hint" id="providerNote"></p>
+            </div>
+            <button type="button" id="draft" class="ghost small">✦ Get script</button>
+
+            <label for="script">Script <span class="hint">one scene per line, optional search words in [brackets]</span></label>
+            <textarea id="script" rows="7" placeholder="Clients are already asking for your service online. [laptop, office]"></textarea>
+          </section>
+
+          <section class="step">
+            <h2><span class="n">2</span> Look</h2>
+            <div class="seg" role="radiogroup" aria-label="Video format">
+              <label><input type="radio" name="fmt" value="9:16" checked /><span><i class="ico tall"></i>9:16 vertical</span></label>
+              <label><input type="radio" name="fmt" value="16:9" /><span><i class="ico wide"></i>16:9 widescreen</span></label>
+            </div>
+            <details class="sub">
+              <summary>Add stock footage <span class="hint">(optional, free keys)</span></summary>
+              <p class="hint">Without a key, scenes use the animated brand background you see in the preview. Free keys: <a href="https://www.pexels.com/api/" target="_blank" rel="noopener">Pexels</a>, <a href="https://pixabay.com/api/docs/" target="_blank" rel="noopener">Pixabay</a>. Keys stay in this tab.</p>
+              <div class="grid2">
+                <label>Pexels key <input id="pexelsKey" type="password" autocomplete="off" /></label>
+                <label>Pixabay key <input id="pixabayKey" type="password" autocomplete="off" /></label>
+              </div>
+            </details>
+          </section>
+
+          <section class="step">
+            <h2><span class="n">3</span> Voice and sound</h2>
+            <div class="voice">
+              <button type="button" id="rec" class="ghost small">● Record my voice</button>
+              <label class="file">or upload audio<input id="voiceFile" type="file" accept="audio/*" /></label>
+              <span id="recState" class="hint"></span>
+            </div>
+            <label class="check"><input type="checkbox" id="music" checked /> Background music, made fresh for each video</label>
+            <label class="check"><input type="checkbox" id="aiLabel" checked /> Show an "AI-assisted" label</label>
+          </section>
+
+          <button type="submit" id="go" class="primary big">Make my video</button>
+        </form>
+
+        <aside class="side">
+          <div id="phone" class="phone tall">
+            <canvas id="live" aria-label="Live preview of your video"></canvas>
+            <video id="preview" controls playsinline hidden></video>
+          </div>
+          <p class="hint center" id="liveHint">Live preview. Edit the script and watch it change.</p>
+
+          <section id="status" class="card" hidden>
+            <p id="statusText" class="strong"></p>
+            <progress id="bar" max="1" value="0"></progress>
+            <p id="error" class="alert" hidden></p>
+            <div class="row"><button type="button" id="retry" class="ghost small" hidden>Retry</button><button type="button" id="stop" class="ghost small">Stop</button></div>
+            <ul id="warnings" class="hint"></ul>
+          </section>
+
+          <section id="result" class="card" hidden>
+            <div class="row">
+              <a id="download" class="primary" download="video.mp4">Download MP4</a>
+              <a id="srt" class="ghost small" download="captions.srt">Captions (.srt)</a>
+              <button type="button" id="back" class="ghost small">Back to preview</button>
+            </div>
+            <label for="credits" class="hint">For your video description:</label>
+            <textarea id="credits" rows="3" readonly></textarea>
+          </section>
+        </aside>
+      </div>
+
+      <section class="tips">
+        <h2>Post it the right way</h2>
+        <div class="tipgrid">
+          <article><h3>Add yourself</h3><p>YouTube's rules leave out mass-produced, repetitive videos from monetisation. Your own voice, opinion or footage makes the difference.</p></article>
+          <article><h3>Label AI honestly</h3><p>Turn on the platform's "altered or synthetic content" setting when a video could look real.</p></article>
+          <article><h3>Keep the credits</h3><p>Pexels and Pixabay clips are free to use. Keep the credits in your description, and never sell the clips on their own.</p></article>
         </div>
-
-        <div class="row">
-          <button type="button" id="draft" class="ghost">Get script</button>
-        </div>
-        <label>Script: one scene per line. Optional search words in [brackets].
-          <textarea id="script" rows="7" placeholder="Clients are already asking for your service online. [laptop, office]"></textarea>
-        </label>
-
-        <fieldset>
-          <legend>Video</legend>
-          <label class="radio"><input type="radio" name="fmt" value="9:16" checked /> 9:16 vertical (reels and shorts)</label>
-          <label class="radio"><input type="radio" name="fmt" value="16:9" /> 16:9 widescreen</label>
-        </fieldset>
-
-        <details class="sub">
-          <summary>Stock footage (optional, free keys)</summary>
-          <p class="hint">Without a key, scenes use our animated background. Get a free key from <a href="https://www.pexels.com/api/" target="_blank" rel="noopener">Pexels</a> or <a href="https://pixabay.com/api/docs/" target="_blank" rel="noopener">Pixabay</a>. Keys stay in this tab.</p>
-          <label>Pexels key <input id="pexelsKey" type="password" autocomplete="off" /></label>
-          <label>Pixabay key <input id="pixabayKey" type="password" autocomplete="off" /></label>
-        </details>
-
-        <fieldset>
-          <legend>Voice and sound</legend>
-          <label>Your voice (optional): upload a recording <input id="voiceFile" type="file" accept="audio/*" /></label>
-          <div class="row"><button type="button" id="rec" class="ghost">● Record my voice</button><span id="recState" class="hint"></span></div>
-          <label class="radio"><input type="checkbox" id="music" checked /> Background music (made fresh for each video)</label>
-          <label class="radio"><input type="checkbox" id="aiLabel" checked /> Show an "AI-assisted" label</label>
-        </fieldset>
-
-        <button type="submit" id="go" class="primary">Make my video</button>
-      </form>
-
-      <section id="status" class="card" hidden>
-        <p id="statusText"></p>
-        <progress id="bar" max="1" value="0"></progress>
-        <p id="error" class="alert" hidden></p>
-        <div class="row"><button type="button" id="retry" class="ghost" hidden>Retry</button><button type="button" id="stop" class="ghost">Stop</button></div>
-        <ul id="warnings" class="hint"></ul>
-      </section>
-
-      <section id="result" class="card" hidden>
-        <video id="preview" controls playsinline></video>
-        <div class="row">
-          <a id="download" class="primary" download="video.mp4">Download MP4</a>
-          <a id="srt" class="ghost" download="captions.srt">Captions (.srt)</a>
-        </div>
-        <p class="hint">Paste this in your video description:</p>
-        <textarea id="credits" rows="3" readonly></textarea>
-      </section>
-
-      <section class="card note">
-        <h2>Before you post on YouTube</h2>
-        <ul>
-          <li>YouTube's monetisation rules leave out "inauthentic" content: mass-produced, repetitive videos with no personal touch. Add your own voice, your own opinion or your own footage.</li>
-          <li>Turn on YouTube's "altered or synthetic content" setting when a video could look real.</li>
-          <li>Keep the footage credits in the description. Pexels and Pixabay clips are free to use, but never sell them on their own.</li>
-        </ul>
       </section>
     </main>
 
-    <footer class="foot">
-      <p><img src="/logo-mark.svg" alt="" width="18" height="18" style="vertical-align:-3px" /> <strong>kahanio</strong> is a free tool from the makers of <a href="https://clientorahq.com" target="_blank" rel="noopener">ClientoraHQ</a>, which finds clients for freelancers and agencies.</p>
-      <p class="hint">Urdu: scripts and captions in Urdu script; add your own voice by recording or uploading it.</p>
+    <footer class="foot wrap">
+      <a class="brand footbrand" href="/"><img src="/logo-mark.svg" alt="" width="30" height="30" /><span>kahanio</span></a>
+      <p>A free tool from the makers of <a href="https://clientorahq.com" target="_blank" rel="noopener">ClientoraHQ</a>, which finds clients for freelancers and agencies. <a href="https://tools.clientorahq.com" target="_blank" rel="noopener">More free tools</a></p>
     </footer>
     <script type="module" src="/src/main.ts"></script>
   </body>
