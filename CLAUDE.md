@@ -1,4 +1,6 @@
-# Reelora (working name): free topic-to-short-video tool by ClientoraHQ
+# Kahanio: free AI reel maker (topic to short video) by ClientoraHQ
+
+Own brand: coral #FF4D6D, ink #14142B, amber #FFB703; logo in `public/logo-mark.svg` and `public/logo-wordmark.svg` (a story bubble with a play button). Home: kahanio.clientorahq.com (planned), showcased on clientorahq.com/tools with "by ClientoraHQ". Site copy and metadata name no other product; SEO targets generic searches (free AI reel maker, topic to video, AI short video generator free, Urdu reel maker). A test guards this.
 
 Shared rules are in `..\CLAUDE.md`. Plan and name checks: see HANDOFF (17 Nov 2026).
 
@@ -11,7 +13,7 @@ Static site (Vite + TypeScript). Everything runs in the visitor's browser: scrip
 - End card: AI-assisted label, footage credits, "by ClientoraHQ".
 
 ## Layout
-- `src/brand.ts`: name and colours. A rename touches this file, `index.html` title/meta and `public/logo-mark.svg`.
+- `src/brand.ts`: name, URL and colours. `THIRD_PARTY_NOTICES.md`: licences (Mediabunny MPL-2.0).
 - Pure, tested: `script.ts`, `timing.ts`, `music.ts`, `stock.ts`, `llm.ts` (`tests/core.test.ts`).
 - Browser only: `audio.ts`, `draw.ts`, `render.ts`, `main.ts`.
 - `src/dev-autorun.ts` + the plugin in `vite.config.ts`: dev server only; render `samples/<name>.json` with `/?auto=<name>`, saved to `samples-out/` (git-ignored). Not in the build.
@@ -25,7 +27,7 @@ npm.cmd run build      # dist/
 ```
 
 ## Not done yet (v2)
-- Name: "Reelora" clashes with reelora.cc / reelora.ai (AI video makers). Owner to confirm or pick another; the logo waits for that.
+- The wordmark SVG uses live text (Poppins); convert to outlines before print or social use.
 - Shared keys through a small proxy (Cloudflare Worker: Turnstile, per-IP daily cap, nothing stored) so visitors need no keys.
 - TTS: English in the browser (kokoro-js, Apache-2.0); Urdu via Azure Speech free tier behind the proxy.
 - Own subdomain, a listing on clientorahq.com/tools and tools.clientorahq.com. No git remote yet; nothing deployed.

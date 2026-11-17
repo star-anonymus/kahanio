@@ -144,3 +144,11 @@ test("every sample script parses into 5-6 scenes with keywords", () => {
     assert.ok(scenes.every((x) => x.keywords.length > 0), f);
   }
 });
+
+test("site copy and metadata use our own name only, and target generic searches", () => {
+  const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+  assert.doesNotMatch(html, /reelora|moneyprinter|mediabunny/i);
+  assert.match(html, /<title>[^<]*Kahanio<\/title>/);
+  for (const k of ["free AI reel maker", "topic to video", "AI short video generator free", "Urdu reel maker"]) assert.ok(html.includes(k), k);
+  assert.match(html, /kahanio\.clientorahq\.com/);
+});

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 100" role="img" aria-label="Kahanio by ClientoraHQ">
+  <path d="M30 6h40a24 24 0 0 1 24 24v28a24 24 0 0 1-24 24H44L24 97V82a24 24 0 0 1-18-23V30A24 24 0 0 1 30 6Z" fill="#FF4D6D"/>
+  <path d="M41 28.5 68 44 41 59.5Z" fill="#FFF4E6" stroke="#FFF4E6" stroke-width="6" stroke-linejoin="round"/>
+  <circle cx="84" cy="14" r="10" fill="#FFB703" stroke="#14142B" stroke-width="4"/>
+  <text x="112" y="62" font-family="Poppins, 'Segoe UI', sans-serif" font-weight="800" font-size="54" fill="#14142B">kahanio</text>
+  <text x="114" y="90" font-family="Poppins, 'Segoe UI', sans-serif" font-weight="600" font-size="17" fill="#FF4D6D">by ClientoraHQ</text>
+</svg>

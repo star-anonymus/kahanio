@@ -1,7 +1,8 @@
 // One place for the product's identity, so a rename touches only this file (and the logo).
 export const BRAND = {
-  name: "Reelora",
-  tagline: "Topic to short video, free.",
+  name: "Kahanio",
+  tagline: "Free AI reel maker: topic to short video.",
+  url: "https://kahanio.clientorahq.com",
   maker: "ClientoraHQ",
   makerUrl: "https://clientorahq.com",
   colors: {

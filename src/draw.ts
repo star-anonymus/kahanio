@@ -155,26 +155,31 @@ export function drawScene(ctx: CanvasRenderingContext2D, f: Frame) {
   drawCaption(ctx, f);
 }
 
-/** The logo mark: a coral rounded square with a play triangle and an amber spark. Used on the page too. */
+// Same paths as public/logo-mark.svg (100x100 box): a story bubble with a play button and an amber spark.
+const MARK_BUBBLE = "M30 6h40a24 24 0 0 1 24 24v28a24 24 0 0 1-24 24H44L24 97V82a24 24 0 0 1-18-23V30A24 24 0 0 1 30 6Z";
+const MARK_PLAY = "M41 28.5 68 44 41 59.5Z";
+
+/** The logo mark, drawn from the SVG paths so the video end card matches the site. */
 export function drawMark(ctx: CanvasRenderingContext2D, cx: number, cy: number, size: number) {
-  const s = size;
   ctx.save();
-  ctx.translate(cx - s / 2, cy - s / 2);
+  ctx.translate(cx - size / 2, cy - size / 2);
+  ctx.scale(size / 100, size / 100);
   ctx.fillStyle = C.coral;
-  ctx.beginPath();
-  ctx.roundRect(0, 0, s, s, s * 0.28);
-  ctx.fill();
+  ctx.fill(new Path2D(MARK_BUBBLE));
+  const play = new Path2D(MARK_PLAY);
   ctx.fillStyle = C.cream;
+  ctx.strokeStyle = C.cream;
+  ctx.lineWidth = 6;
+  ctx.lineJoin = "round";
+  ctx.fill(play);
+  ctx.stroke(play);
   ctx.beginPath();
-  ctx.moveTo(s * 0.38, s * 0.28);
-  ctx.lineTo(s * 0.74, s * 0.5);
-  ctx.lineTo(s * 0.38, s * 0.72);
-  ctx.closePath();
-  ctx.fill();
+  ctx.arc(84, 14, 10, 0, Math.PI * 2);
   ctx.fillStyle = C.amber;
-  ctx.beginPath();
-  ctx.arc(s * 0.82, s * 0.18, s * 0.11, 0, Math.PI * 2);
   ctx.fill();
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = C.ink;
+  ctx.stroke();
   ctx.restore();
 }
 
@@ -190,7 +195,7 @@ export function drawEndCard(ctx: CanvasRenderingContext2D, w: number, h: number,
   ctx.textBaseline = "middle";
   ctx.fillStyle = "#fff";
   ctx.font = `800 ${Math.round(unit * 0.1)}px ${FONT}`;
-  ctx.fillText(BRAND.name, w / 2, top + unit * 0.2);
+  ctx.fillText(BRAND.name.toLowerCase(), w / 2, top + unit * 0.2);
   ctx.fillStyle = C.amber;
   ctx.font = `600 ${Math.round(unit * 0.04)}px ${FONT}`;
   ctx.fillText(`by ${BRAND.maker}`, w / 2, top + unit * 0.29);
@@ -200,6 +205,7 @@ export function drawEndCard(ctx: CanvasRenderingContext2D, w: number, h: number,
     ...(aiLabel ? ["AI-assisted video"] : []),
     ...(credits.length ? ["Footage: " + credits.slice(0, 4).join(", ") + (credits.length > 4 ? " and others" : "")] : []),
     `Music made by ${BRAND.name}`,
+    `Make yours free: ${BRAND.url.replace("https://", "")}`,
   ];
   lines.forEach((l, i) => ctx.fillText(l, w / 2, top + unit * (0.42 + i * 0.05), w * 0.9));
   ctx.globalAlpha = 1;
