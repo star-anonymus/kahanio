@@ -35,4 +35,9 @@ npm.cmd run build      # dist/
 - The wordmark SVG uses live text (Poppins); convert to outlines before print or social use.
 - Shared keys through a small proxy (Cloudflare Worker: Turnstile, per-IP daily cap, nothing stored) so visitors need no keys.
 - TTS: English in the browser (kokoro-js, Apache-2.0); Urdu via Azure Speech free tier behind the proxy.
-- Own subdomain, a listing on clientorahq.com/tools and tools.clientorahq.com. No git remote yet; nothing deployed.
+- Listing on clientorahq.com/tools and tools.clientorahq.com.
+
+## Live (18 Nov 2026)
+- Site: https://kahanio.clientorahq.com (Vercel project `kahanio`, also kahanio.vercel.app). Deploy: `vercel.cmd deploy --prod --yes` from this folder; env VITE_TTS_URL + VITE_TURNSTILE_SITEKEY are set in Vercel (Production).
+- Voice Worker: https://kahanio-voice.kahanio-app.workers.dev (owner's Cloudflare). Secrets FAMESPEAK_KEY, TURNSTILE_SECRET, SESSION_SECRET. Deploy with `npx.cmd wrangler deploy` in worker/ (owner runs it).
+- Source: github.com/star-anonymus/kahanio (public, GPL-3.0). Push = public, so only with the owner's OK.
