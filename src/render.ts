@@ -10,7 +10,7 @@ import { motionAt, motionForScene } from "./motion.ts";
 import { ParallaxRenderer, type PhotoLayer } from "./parallax.ts";
 import { CharacterRig, type CharacterId, DEFAULT_CHARACTER } from "./cartoon.ts";
 import { cartoonPose, voiceEnvelope } from "./cartoon-motion.ts";
-import { type Caption, captionChunks, findIndex, sceneTimings, toSrt } from "./timing.ts";
+import { type Caption, captionChunks, findIndex, sceneTimings, spansFromDurations, toSrt } from "./timing.ts";
 
 export type Format = "9:16" | "16:9";
 export const FPS = 30;
@@ -27,6 +27,8 @@ export type RenderJob = {
   topic?: string;
   photos?: PhotoLayer[];
   character?: CharacterId;
+  /** Per-scene lengths when the voice was made scene by scene (AI voice). */
+  sceneDurations?: number[];
   seed: number;
 };
 export type RenderResult = { blob: Blob; srt: string; credits: string[]; seconds: number; warnings: string[] };
@@ -76,7 +78,7 @@ function seek(v: HTMLVideoElement, time: number): Promise<void> {
 export async function renderVideo(job: RenderJob, onProgress: (fraction: number, label: string) => void, signal?: AbortSignal): Promise<RenderResult> {
   const warnings: string[] = [];
   const { w, h } = sizeFor(job.format);
-  const spans = sceneTimings(job.scenes, job.voice?.duration);
+  const spans = job.sceneDurations && job.sceneDurations.length === job.scenes.length ? spansFromDurations(job.sceneDurations) : sceneTimings(job.scenes, job.voice?.duration);
   const body = spans.length ? spans[spans.length - 1].end : 0;
   const total = body + END_CARD_SEC;
   const captions: Caption[][] = job.scenes.map((s, i) => captionChunks(s.text, spans[i]));

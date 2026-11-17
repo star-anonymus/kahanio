@@ -254,3 +254,40 @@ test("cartoon: every ported character has artwork and a pose function", async ()
     assert.equal(typeof (CHARACTER_POSERS as Record<string, unknown>)[c.id], "function");
   }
 });
+
+test("voice: scene spans follow measured durations exactly", async () => {
+  const { spansFromDurations } = await import("../src/timing.ts");
+  assert.deepEqual(spansFromDurations([1.5, 2, 0.5]), [{ start: 0, end: 1.5 }, { start: 1.5, end: 3.5 }, { start: 3.5, end: 4 }]);
+});
+
+test("worker: SSML is escaped and only allowed voices pass", async () => {
+  const { buildSsml, validateTts, AZURE_VOICES, MAX_CHARS } = await import("../worker/core.ts");
+  const ssml = buildSsml(`Tom & "Jerry" <b>`, "en-US-AvaNeural");
+  assert.match(ssml, /xml:lang="en-US"/);
+  assert.match(ssml, /Tom &amp; &quot;Jerry&quot; &lt;b&gt;/);
+  assert.throws(() => buildSsml("x", "en-US-Nobody"));
+  assert.ok(AZURE_VOICES.some((v) => v.lang === "ur") && AZURE_VOICES.some((v) => v.lang === "en"));
+  assert.deepEqual(validateTts({ text: "  hi  there ", voice: "ur-PK-UzmaNeural", session: "s" }), { text: "hi there", voice: "ur-PK-UzmaNeural", session: "s" });
+  assert.ok("error" in validateTts({ text: "x".repeat(MAX_CHARS + 1), voice: "ur-PK-UzmaNeural", session: "s" }));
+  assert.ok("error" in validateTts({ text: "hi", voice: "evil", session: "s" }));
+  assert.ok("error" in validateTts({ text: "", voice: "ur-PK-UzmaNeural", session: "s" }));
+  assert.ok("error" in validateTts(null));
+});
+
+test("worker: session tokens are signed, IP-bound and expire", async () => {
+  const { signSession, verifySession, SESSION_SECONDS } = await import("../worker/core.ts");
+  const now = 1_800_000_000_000;
+  const tok = await signSession("secret-1", "1.2.3.4", now);
+  assert.equal(await verifySession("secret-1", tok, "1.2.3.4", now + 1000), true);
+  assert.equal(await verifySession("secret-1", tok, "5.6.7.8", now), false, "other IP");
+  assert.equal(await verifySession("secret-2", tok, "1.2.3.4", now), false, "other secret");
+  assert.equal(await verifySession("secret-1", tok, "1.2.3.4", now + (SESSION_SECONDS + 5) * 1000), false, "expired");
+  assert.equal(await verifySession("secret-1", tok.slice(0, -2) + "xx", "1.2.3.4", now), false, "tampered");
+});
+
+test("worker: CORS answers only allowed origins", async () => {
+  const { corsHeaders } = await import("../worker/core.ts");
+  const allowed = "https://kahanio.clientorahq.com,http://localhost:4830";
+  assert.equal(corsHeaders("http://localhost:4830", allowed)["Access-Control-Allow-Origin"], "http://localhost:4830");
+  assert.equal(corsHeaders("https://evil.example", allowed)["Access-Control-Allow-Origin"], "https://kahanio.clientorahq.com");
+});

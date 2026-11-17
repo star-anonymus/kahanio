@@ -25,8 +25,22 @@ export async function autorun(runJob: RunJob) {
       window.__devStatus = "loading photos";
       await box.addFromUrls(photoUrls.map((p) => "/" + p), q.get("depth") !== "0");
     }
+    const scenes = parseScript(sample.script);
+    let voice: AudioBuffer | undefined;
+    let sceneDurations: number[] | undefined;
+    const vq = q.get("voice");
+    if (vq) {
+      const { KOKORO_VOICES, speakScenes } = await import("./tts.ts");
+      const opt = KOKORO_VOICES.find((v) => v.id === vq);
+      if (!opt) throw new Error("unknown voice " + vq);
+      const t0 = performance.now();
+      const sp = await speakScenes(scenes, opt, (m) => (window.__devStatus = m));
+      voice = sp.buffer;
+      sceneDurations = sp.durations;
+      (window as unknown as { __ttsMs?: number }).__ttsMs = Math.round(performance.now() - t0);
+    }
     const res = await runJob(
-      { scenes: parseScript(sample.script), format: sample.format, music: true, aiLabel: true, keys: {}, seed: sample.seed, style: (q.get("style") as Job["style"]) ?? sample.style, topic: sample.topic, photos: box?.get(), character: (q.get("char") as Job["character"]) ?? undefined },
+      { voice, sceneDurations, scenes, format: sample.format, music: true, aiLabel: true, keys: {}, seed: sample.seed, style: (q.get("style") as Job["style"]) ?? sample.style, topic: sample.topic, photos: box?.get(), character: (q.get("char") as Job["character"]) ?? undefined },
       (f, label) => (window.__devStatus = `${label} ${Math.round(f * 100)}%`),
     );
     const target = out && /^[a-z0-9-]+$/.test(out) ? `/__save?name=${out}&dir=photo` : `/__save?name=${name}`;

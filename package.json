@@ -12,11 +12,18 @@
   },
   "dependencies": {
     "@huggingface/transformers": "4.3.2",
+    "kokoro-js": "1.2.1",
     "mediabunny": "1.66.0"
   },
   "devDependencies": {
     "@types/node": "20.19.43",
     "typescript": "5.9.3",
     "vite": "8.3.8"
-  }
+  },
+  "overrides": {
+    "kokoro-js": {
+      "@huggingface/transformers": "$@huggingface/transformers"
+    }
+  },
+  "license": "GPL-3.0-or-later"
 }

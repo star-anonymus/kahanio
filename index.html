@@ -138,7 +138,20 @@
 
           <section class="step">
             <h2><span class="n">3</span> Voice and sound</h2>
-            <div class="voice">
+            <div class="seg" role="radiogroup" aria-label="Voice">
+              <label><input type="radio" name="vmode" value="none" checked /><span>No voice</span></label>
+              <label><input type="radio" name="vmode" value="ai" /><span>✦ AI voice</span></label>
+              <label><input type="radio" name="vmode" value="mine" /><span>My voice</span></label>
+            </div>
+            <div id="voiceBox" class="sub" hidden>
+              <div class="grid2">
+                <label>Language <select id="voiceLang"><option value="en">English</option><option value="ur">Urdu (اردو)</option></select></label>
+                <label>Voice <select id="voicePick"></select></label>
+              </div>
+              <p class="hint" id="voiceHint"></p>
+              <div class="row"><button type="button" id="voiceListen" class="ghost small">▶ Listen</button><span id="voiceStatus" class="hint" role="status"></span></div>
+            </div>
+            <div id="mineBox" class="voice" hidden>
               <button type="button" id="rec" class="ghost small">● Record my voice</button>
               <label class="file">or upload audio<input id="voiceFile" type="file" accept="audio/*" /></label>
               <span id="recState" class="hint"></span>
@@ -191,6 +204,7 @@
     <footer class="foot wrap">
       <a class="brand footbrand" href="/"><img src="/logo-mark.svg" alt="" width="30" height="30" /><span>kahanio</span></a>
       <p>A free tool from the makers of <a href="https://clientorahq.com" target="_blank" rel="noopener">ClientoraHQ</a>, which finds clients for freelancers and agencies. <a href="https://tools.clientorahq.com" target="_blank" rel="noopener">More free tools</a></p>
+      <p class="hint">Free and open source under the <a href="/LICENSE.txt">GNU GPL-3.0</a>. Free AI voice by Kokoro; online voices by Microsoft Azure.</p>
     </footer>
     <script type="module" src="/src/main.ts"></script>
   </body>

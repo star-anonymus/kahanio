@@ -85,3 +85,14 @@ export function toSrt(captions: Caption[]): string {
   };
   return captions.map((c, i) => `${i + 1}\n${ts(c.start)} --> ${ts(c.end)}\n${c.text}\n`).join("\n");
 }
+
+/** Scene spans from measured durations (one spoken clip per scene), so captions match the voice exactly. */
+export function spansFromDurations(durations: number[]): Span[] {
+  const out: Span[] = [];
+  let t = 0;
+  for (const d of durations) {
+    out.push({ start: t, end: t + d });
+    t += d;
+  }
+  return out;
+}

@@ -29,4 +29,8 @@ function devSamples(): Plugin {
   };
 }
 
-export default defineConfig({ plugins: [devSamples()] });
+// Cross-origin isolation lets the on-device AI (voice, depth) use all CPU threads. "credentialless" keeps
+// cross-origin fonts, models and stock clips loading. Production hosting must send the same two headers (see vercel.json).
+const isolation = { "Cross-Origin-Opener-Policy": "same-origin", "Cross-Origin-Embedder-Policy": "credentialless" };
+
+export default defineConfig({ plugins: [devSamples()], server: { headers: isolation }, preview: { headers: isolation } });

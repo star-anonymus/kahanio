@@ -1,4 +1,5 @@
 import { decodeVoice } from "./audio.ts";
+import { setupVoice } from "./voice-ui.ts";
 import { type CharacterId, CHARACTERS, DEFAULT_CHARACTER } from "./cartoon.ts";
 import type { PhotoLayer } from "./parallax.ts";
 import { setupPhotos } from "./photos.ts";
@@ -25,6 +26,7 @@ export type Job = {
   keys: { pexels?: string; pixabay?: string };
   photos?: PhotoLayer[];
   character?: CharacterId;
+  sceneDurations?: number[];
   seed: number;
 };
 
@@ -145,6 +147,7 @@ function init() {
     };
   });
   const photoBox = setupPhotos(() => undefined);
+  const voiceUi = setupVoice(() => parseScript(scriptBox.value));
   if (import.meta.env.DEV) (window as unknown as { __photos?: typeof photoBox }).__photos = photoBox;
   startPreview($<HTMLCanvasElement>("live"), () => {
     const typed = parseScript(scriptBox.value);
@@ -242,7 +245,18 @@ function init() {
     controller = new AbortController();
     ($("go") as HTMLButtonElement).disabled = true;
     try {
-      const voice = voiceBlob ? await decodeVoice(voiceBlob) : undefined;
+      const notes: string[] = [];
+      let voice: AudioBuffer | undefined;
+      let sceneDurations: number[] | undefined;
+      if (voiceUi.mode() === "ai") {
+        const spoken = await voiceUi.speak(scenes, (m) => ($("statusText").textContent = m));
+        voice = spoken.buffer;
+        sceneDurations = spoken.durations;
+        if (spoken.note) notes.push(spoken.note);
+      } else if (voiceUi.mode() === "mine") {
+        if (!voiceBlob) throw new Error("Record or upload your voice first, or pick No voice.");
+        voice = await decodeVoice(voiceBlob);
+      }
       const job: Job = {
         scenes,
         format: (document.querySelector('input[name="fmt"]:checked') as HTMLInputElement).value as Format,
@@ -253,6 +267,7 @@ function init() {
         topic: topicBox.value.trim(),
         photos: photoBox.get(),
         character,
+        sceneDurations,
         keys: { pexels: $<HTMLInputElement>("pexelsKey").value.trim() || undefined, pixabay: $<HTMLInputElement>("pixabayKey").value.trim() || undefined },
         seed: Math.floor(Math.random() * 1e9),
       };
@@ -273,11 +288,12 @@ function init() {
       $<HTMLTextAreaElement>("credits").value = [
         res.credits.length ? `Footage: ${res.credits.join(", ")}.` : "",
         `Made with ${BRAND.name} by ${BRAND.maker}. Music made by ${BRAND.name}.`,
+        voiceUi.mode() === "ai" ? `AI voice: ${voiceUi.label()}.` : "",
         job.aiLabel ? "AI-assisted video." : "",
       ]
         .filter(Boolean)
         .join("\n");
-      $("warnings").innerHTML = res.warnings.map((w) => `<li>${w.replace(/</g, "&lt;")}</li>`).join("");
+      $("warnings").innerHTML = [...notes, ...res.warnings].map((w) => `<li>${w.replace(/</g, "&lt;")}</li>`).join("");
       $("statusText").textContent = `Done: ${Math.round(res.seconds)} seconds.`;
       $("result").hidden = false;
       showVideo(true);

@@ -1,0 +1,14 @@
+# Kahanio voice Worker. Deploy (owner only): see worker/README.md.
+name = "kahanio-voice"
+main = "index.ts"
+compatibility_date = "2026-11-01"
+
+[vars]
+AZURE_REGION = "eastus"
+ALLOWED_ORIGINS = "https://kahanio.clientorahq.com,http://localhost:4830,http://localhost:4832"
+
+# Per-IP limit: 20 requests a minute (period must be 10 or 60 seconds). Needs Wrangler 4.36+.
+[[ratelimits]]
+name = "LIMITER"
+namespace_id = "1001"
+simple = { limit = 20, period = 60 }
