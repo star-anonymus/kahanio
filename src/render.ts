@@ -6,6 +6,8 @@ import { drawEndCard, drawScene } from "./draw.ts";
 import type { Scene } from "./script.ts";
 import type { Clip } from "./stock.ts";
 import { creditLines } from "./stock.ts";
+import { motionAt, motionForScene } from "./motion.ts";
+import { ParallaxRenderer, type PhotoLayer } from "./parallax.ts";
 import { type Caption, captionChunks, findIndex, sceneTimings, toSrt } from "./timing.ts";
 
 export type Format = "9:16" | "16:9";
@@ -21,6 +23,7 @@ export type RenderJob = {
   aiLabel: boolean;
   style?: StyleId;
   topic?: string;
+  photos?: PhotoLayer[];
   seed: number;
 };
 export type RenderResult = { blob: Blob; srt: string; credits: string[]; seconds: number; warnings: string[] };
@@ -97,6 +100,15 @@ export async function renderVideo(job: RenderJob, onProgress: (fraction: number,
 
   const videoCodec = (await canEncodeVideo("avc", { width: w, height: h })) ? "avc" : "vp9";
   const audioCodec = (await canEncodeAudio("aac")) ? "aac" : "opus";
+  const photos = job.photos ?? [];
+  let parallax: ParallaxRenderer | null = null;
+  if (photos.length) {
+    try {
+      parallax = new ParallaxRenderer(w, h);
+    } catch (e) {
+      warnings.push(`${(e as Error).message} Photo scenes use the animated background.`);
+    }
+  }
   const canvas = document.createElement("canvas");
   canvas.width = w;
   canvas.height = h;
@@ -121,8 +133,11 @@ export async function renderVideo(job: RenderJob, onProgress: (fraction: number,
     const t = n / FPS;
     if (t < body) {
       const i = findIndex(spans, t);
-      const clip = videos[i];
-      if (clip) await seek(clip, (t - spans[i].start) % Math.max(0.5, clip.duration - 0.1));
+      const video = videos[i];
+      if (video) await seek(video, (t - spans[i].start) % Math.max(0.5, video.duration - 0.1));
+      const photo = !video && photos.length ? photos[i % photos.length] : null;
+      const local = (t - spans[i].start) / Math.max(0.001, spans[i].end - spans[i].start);
+      const clip = video ?? (photo && parallax ? parallax.render(photo, motionAt(motionForScene(i), local)) : null);
       drawScene(ctx, {
         w,
         h,

@@ -1,4 +1,6 @@
 import { decodeVoice } from "./audio.ts";
+import type { PhotoLayer } from "./parallax.ts";
+import { setupPhotos } from "./photos.ts";
 import type { StyleId } from "./styles.ts";
 import { BRAND } from "./brand.ts";
 import { FONT } from "./draw.ts";
@@ -20,6 +22,7 @@ export type Job = {
   style?: StyleId;
   topic?: string;
   keys: { pexels?: string; pixabay?: string };
+  photos?: PhotoLayer[];
   seed: number;
 };
 
@@ -129,6 +132,8 @@ function init() {
       $<HTMLFormElement>("heroForm").requestSubmit();
     };
   });
+  const photoBox = setupPhotos(() => undefined);
+  if (import.meta.env.DEV) (window as unknown as { __photos?: typeof photoBox }).__photos = photoBox;
   startPreview($<HTMLCanvasElement>("live"), () => {
     const typed = parseScript(scriptBox.value);
     const topic = topicBox.value.trim() || "your topic";
@@ -138,6 +143,7 @@ function init() {
       aiLabel: $<HTMLInputElement>("aiLabel").checked,
       style,
       topic,
+      photos: photoBox.get(),
     };
   });
   const showVideo = (on: boolean) => {
@@ -232,6 +238,7 @@ function init() {
         aiLabel: $<HTMLInputElement>("aiLabel").checked,
         style,
         topic: topicBox.value.trim(),
+        photos: photoBox.get(),
         keys: { pexels: $<HTMLInputElement>("pexelsKey").value.trim() || undefined, pixabay: $<HTMLInputElement>("pixabayKey").value.trim() || undefined },
         seed: Math.floor(Math.random() * 1e9),
       };

@@ -174,3 +174,38 @@ test("templates and goals are complete and their starters parse", async () => {
     assert.ok(parseScript(g.starter("cold email").join("\n")).length >= 4, g.id);
   }
 });
+
+test("photo motion: eased, small, smooth camera moves", async () => {
+  const { motionAt, MOTIONS, motionForScene } = await import("../src/motion.ts");
+  for (const k of MOTIONS) {
+    let prev = motionAt(k, 0);
+    for (let i = 1; i <= 100; i++) {
+      const m = motionAt(k, i / 100);
+      assert.ok(Math.abs(m.dx) <= 0.02 && Math.abs(m.dy) <= 0.02, k);
+      assert.ok(m.zoom >= 1.05 && m.zoom <= 1.15, k);
+      // No jumps between consecutive frames (smooth, never shaky).
+      assert.ok(Math.abs(m.dx - prev.dx) < 0.002 && Math.abs(m.dy - prev.dy) < 0.002 && Math.abs(m.zoom - prev.zoom) < 0.004, k);
+      prev = m;
+    }
+  }
+  assert.equal(motionForScene(0), MOTIONS[0]);
+  assert.equal(motionForScene(MOTIONS.length), MOTIONS[0]);
+});
+
+test("coverUV crops the long side and centres", async () => {
+  const { coverUV } = await import("../src/motion.ts");
+  const wide = coverUV(1920, 1080, 1080, 1920);
+  assert.ok(Math.abs(wide.sx - (1080 / 1920) / (1920 / 1080)) < 1e-9);
+  assert.equal(wide.sy, 1);
+  assert.ok(Math.abs(wide.ox - (1 - wide.sx) / 2) < 1e-9);
+  const tall = coverUV(1080, 1920, 1920, 1080);
+  assert.equal(tall.sx, 1);
+  assert.ok(tall.sy < 1 && Math.abs(tall.oy - (1 - tall.sy) / 2) < 1e-9);
+  assert.deepEqual(coverUV(100, 100, 100, 100), { sx: 1, sy: 1, ox: 0, oy: 0 });
+});
+
+test("fitLongSide caps the long side and never upscales", async () => {
+  const { fitLongSide } = await import("../src/motion.ts");
+  assert.deepEqual(fitLongSide(4000, 3000, 1920), { w: 1920, h: 1440 });
+  assert.deepEqual(fitLongSide(800, 600, 1920), { w: 800, h: 600 });
+});

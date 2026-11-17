@@ -115,6 +115,13 @@
               <label><input type="radio" name="fmt" value="9:16" checked /><span><i class="ico tall"></i>9:16 vertical</span></label>
               <label><input type="radio" name="fmt" value="16:9" /><span><i class="ico wide"></i>16:9 widescreen</span></label>
             </div>
+            <div class="photos">
+              <label for="photoFiles">Your photos <span class="hint">(optional) they come to life with slow, smooth camera motion</span></label>
+              <input id="photoFiles" type="file" accept="image/*" multiple />
+              <div id="photoList" class="thumbs"></div>
+              <label class="check"><input type="checkbox" id="depth3d" checked /> 3D depth motion <span class="hint">downloads a 27 MB AI model once and runs on your device. Photos are never uploaded.</span></label>
+              <div class="row"><span id="photoStatus" class="hint" role="status"></span><button type="button" id="photoRetry" class="ghost small" hidden>Retry</button></div>
+            </div>
             <details class="sub">
               <summary>Add stock footage <span class="hint">(optional, free keys)</span></summary>
               <p class="hint">Without a key, scenes use the animated brand background you see in the preview. Free keys: <a href="https://www.pexels.com/api/" target="_blank" rel="noopener">Pexels</a>, <a href="https://pixabay.com/api/docs/" target="_blank" rel="noopener">Pixabay</a>. Keys stay in this tab.</p>

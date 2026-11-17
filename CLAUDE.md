@@ -9,6 +9,7 @@ Static site (Vite + TypeScript). Everything runs in the visitor's browser: scrip
 - Script: the user's own text, a no-AI starter, or a free AI tier with the user's own key (Groq, Gemini, OpenRouter free), called from the browser.
 - Footage: Pexels / Pixabay with the user's own free key; otherwise an animated brand gradient.
 - Voice: the user's own recording (upload or record). No TTS yet.
+- Photos: the user's own photos come alive with slow camera moves (`motion.ts`, WebGL2 `parallax.ts`). Optional 3D depth: Depth Anything V2 **Small** (Apache-2.0) via transformers.js, lazy-loaded (`depth.ts`), about 27 MB downloaded once by the visitor's browser from Hugging Face. Never switch to the Base/Large models: they are CC-BY-NC. Motion stays slow and eased (tested: no frame-to-frame jumps).
 - Music: generated from notes at render time (`src/music.ts`, `src/audio.ts`): no licence or Content ID risk.
 - End card: AI-assisted label, footage credits, "by ClientoraHQ".
 
@@ -16,7 +17,7 @@ Static site (Vite + TypeScript). Everything runs in the visitor's browser: scrip
 - `src/brand.ts`: name, URL and colours. `THIRD_PARTY_NOTICES.md`: licences (Mediabunny MPL-2.0).
 - Pure, tested: `script.ts`, `timing.ts`, `music.ts`, `stock.ts`, `llm.ts` (`tests/core.test.ts`).
 - Browser only: `audio.ts`, `draw.ts`, `render.ts`, `main.ts`.
-- `src/dev-autorun.ts` + the plugin in `vite.config.ts`: dev server only; render `samples/<name>.json` with `/?auto=<name>`, saved to `samples-out/` (git-ignored). Not in the build.
+- `src/dev-autorun.ts` + the plugin in `vite.config.ts`: dev server only; render `samples/<name>.json` with `/?auto=<name>`, saved to `samples-out/` (git-ignored). Add `&out=<name>&photos=dev-photos/<file>.jpg` to test photo motion; it saves to `photo-out/`. `dev-photos/` and `photo-out/` are git-ignored: the owner's own photos stay local. Not in the build.
 
 ## Commands
 ```

@@ -2,3 +2,5 @@ node_modules/
 dist/
 samples-out/
 *.log
+photo-out/
+dev-photos/

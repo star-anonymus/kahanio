@@ -18,16 +18,17 @@ export type Frame = {
   sceneCount: number;
   sceneStart: number;
   sceneEnd: number;
-  clip: HTMLVideoElement | null;
+  clip: HTMLVideoElement | HTMLCanvasElement | null;
   captions: Caption[];
   aiLabel: boolean;
   style?: StyleId;
   topic?: string;
 };
 
-export function cover(ctx: CanvasRenderingContext2D, v: HTMLVideoElement, w: number, h: number, zoom: number) {
-  const vw = v.videoWidth || w;
-  const vh = v.videoHeight || h;
+export function cover(ctx: CanvasRenderingContext2D, v: HTMLVideoElement | HTMLCanvasElement, w: number, h: number, zoom: number) {
+  if (!(v instanceof HTMLVideoElement)) zoom = 1; // photo motion brings its own camera move
+  const vw = (v instanceof HTMLVideoElement ? v.videoWidth : v.width) || w;
+  const vh = (v instanceof HTMLVideoElement ? v.videoHeight : v.height) || h;
   const s = Math.max(w / vw, h / vh) * zoom;
   const dw = vw * s;
   const dh = vh * s;
