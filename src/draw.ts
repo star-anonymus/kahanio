@@ -23,6 +23,8 @@ export type Frame = {
   aiLabel: boolean;
   style?: StyleId;
   topic?: string;
+  /** Cartoon template: the posed character for this frame (500 x 720 artwork). */
+  character?: CanvasImageSource | null;
 };
 
 export function cover(ctx: CanvasRenderingContext2D, v: HTMLVideoElement | HTMLCanvasElement, w: number, h: number, zoom: number) {

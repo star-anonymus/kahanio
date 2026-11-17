@@ -8,6 +8,8 @@ import type { Clip } from "./stock.ts";
 import { creditLines } from "./stock.ts";
 import { motionAt, motionForScene } from "./motion.ts";
 import { ParallaxRenderer, type PhotoLayer } from "./parallax.ts";
+import { CharacterRig, type CharacterId, DEFAULT_CHARACTER } from "./cartoon.ts";
+import { cartoonPose, voiceEnvelope } from "./cartoon-motion.ts";
 import { type Caption, captionChunks, findIndex, sceneTimings, toSrt } from "./timing.ts";
 
 export type Format = "9:16" | "16:9";
@@ -24,6 +26,7 @@ export type RenderJob = {
   style?: StyleId;
   topic?: string;
   photos?: PhotoLayer[];
+  character?: CharacterId;
   seed: number;
 };
 export type RenderResult = { blob: Blob; srt: string; credits: string[]; seconds: number; warnings: string[] };
@@ -97,6 +100,8 @@ export async function renderVideo(job: RenderJob, onProgress: (fraction: number,
 
   onProgress(0.06, "Mixing sound");
   const audio = await buildSoundtrack(total, { music: job.music, seed: job.seed, voice: job.voice });
+  const rig = job.style === "cartoon" ? new CharacterRig(job.character ?? DEFAULT_CHARACTER) : null;
+  const env = rig && job.voice ? voiceEnvelope(job.voice.getChannelData(0), job.voice.sampleRate, FPS) : null;
 
   const videoCodec = (await canEncodeVideo("avc", { width: w, height: h })) ? "avc" : "vp9";
   const audioCodec = (await canEncodeAudio("aac")) ? "aac" : "opus";
@@ -138,6 +143,9 @@ export async function renderVideo(job: RenderJob, onProgress: (fraction: number,
       const photo = !video && photos.length ? photos[i % photos.length] : null;
       const local = (t - spans[i].start) / Math.max(0.001, spans[i].end - spans[i].start);
       const clip = video ?? (photo && parallax ? parallax.render(photo, motionAt(motionForScene(i), local)) : null);
+      const character = rig
+        ? await rig.frame(cartoonPose({ t, sceneIndex: i, sceneCount: spans.length, sceneStart: spans[i].start, sceneEnd: spans[i].end, words: captions[i].flatMap((c) => c.words), voiceLevel: env ? (env[n] ?? 0) : undefined, seed: job.seed % 7 }))
+        : null;
       drawScene(ctx, {
         w,
         h,
@@ -152,6 +160,7 @@ export async function renderVideo(job: RenderJob, onProgress: (fraction: number,
         aiLabel: job.aiLabel,
         style: job.style,
         topic: job.topic,
+        character,
       });
     } else drawEndCard(ctx, w, h, t - body, credits, job.aiLabel);
     await vsrc.add(t, 1 / FPS);

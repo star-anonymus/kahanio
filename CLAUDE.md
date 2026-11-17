@@ -10,6 +10,7 @@ Static site (Vite + TypeScript). Everything runs in the visitor's browser: scrip
 - Footage: Pexels / Pixabay with the user's own free key; otherwise an animated brand gradient.
 - Voice: the user's own recording (upload or record). No TTS yet.
 - Photos: the user's own photos come alive with slow camera moves (`motion.ts`, WebGL2 `parallax.ts`). Optional 3D depth: Depth Anything V2 **Small** (Apache-2.0) via transformers.js, lazy-loaded (`depth.ts`), about 27 MB downloaded once by the visitor's browser from Hugging Face. Never switch to the Base/Large models: they are CC-BY-NC. Motion stays slow and eased (tested: no frame-to-frame jumps).
+- Cartoon template: ClientoraHQ's own 2D characters (Bilal, Baji, Ustad, Chacha from `Clientora_Studio/brand/mascot`) present the script from a speech bubble in flat 2D rooms, with lip-sync to the words (or to the user's recorded voice), blinks and gestures (`cartoon-motion.ts`, `cartoon.ts`). `src/characters.generated.ts` is made by `node scripts/port-characters.mjs`: re-run it after a character changes in the Studio repo; never edit it by hand.
 - Music: generated from notes at render time (`src/music.ts`, `src/audio.ts`): no licence or Content ID risk.
 - End card: AI-assisted label, footage credits, "by ClientoraHQ".
 

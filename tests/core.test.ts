@@ -141,7 +141,7 @@ test("every sample script parses into 5-6 scenes with keywords", () => {
     const s = JSON.parse(readFileSync(new URL(f, dir), "utf8"));
     const scenes = parseScript(s.script);
     assert.ok(scenes.length >= 5 && scenes.length <= 6, f);
-    assert.ok(["story", "pop", "clean", "neon", "chat", "news"].includes(s.style), f);
+    assert.ok(["story", "pop", "clean", "neon", "chat", "news", "cartoon"].includes(s.style), f);
     assert.ok(scenes.every((x) => x.keywords.length > 0), f);
   }
 });
@@ -167,7 +167,7 @@ test("easing curves start at 0, end at 1, and clamp", async () => {
 
 test("templates and goals are complete and their starters parse", async () => {
   const { TEMPLATES, GOALS, sampleScenes } = await import("../src/templates.ts");
-  assert.equal(new Set(TEMPLATES.map((t) => t.id)).size, 6);
+  assert.equal(new Set(TEMPLATES.map((t) => t.id)).size, 7);
   for (const t of TEMPLATES) assert.ok(sampleScenes(t).length >= 3, t.id);
   for (const g of GOALS) {
     assert.ok(TEMPLATES.some((t) => t.id === g.style), g.id);
@@ -208,4 +208,49 @@ test("fitLongSide caps the long side and never upscales", async () => {
   const { fitLongSide } = await import("../src/motion.ts");
   assert.deepEqual(fitLongSide(4000, 3000, 1920), { w: 1920, h: 1440 });
   assert.deepEqual(fitLongSide(800, 600, 1920), { w: 800, h: 600 });
+});
+
+test("cartoon: lip-sync opens only while a word is spoken", async () => {
+  const { mouthFromWords } = await import("../src/cartoon-motion.ts");
+  const words = [{ w: "hello", start: 1, end: 1.5 }, { w: "there", start: 2, end: 2.5 }];
+  assert.equal(mouthFromWords(words, 0.5), 0);
+  assert.equal(mouthFromWords(words, 1.7), 0);
+  const open = [1.05, 1.15, 1.25, 1.35].map((t) => mouthFromWords(words, t));
+  assert.ok(open.every((v) => v > 0.1 && v <= 0.8));
+  assert.ok(Math.max(...open) > 0.5);
+});
+
+test("cartoon: voice envelope follows loudness and ignores silence", async () => {
+  const { voiceEnvelope } = await import("../src/cartoon-motion.ts");
+  const sr = 3000;
+  const s = new Float32Array(sr * 2);
+  for (let i = sr; i < sr * 2; i++) s[i] = Math.sin(i / 3) * 0.5;
+  const env = voiceEnvelope(s, sr, 30);
+  assert.equal(env.length, 60);
+  assert.ok(env[5] < 0.01, "silent first second");
+  assert.ok(env[50] > 0.8, "loud second second");
+  assert.ok(env.every((v) => v >= 0 && v <= 1));
+});
+
+test("cartoon: blinks are short and occasional; pose stays in range", async () => {
+  const { blinkAt, cartoonPose } = await import("../src/cartoon-motion.ts");
+  let closed = 0;
+  for (let i = 0; i < 3000; i++) if (blinkAt(i / 100) > 0.5) closed++;
+  assert.ok(closed > 5 && closed < 200, `closed frames: ${closed}`);
+  for (let t = 0; t < 6; t += 0.05) {
+    const p = cartoonPose({ t, sceneIndex: 1, sceneCount: 3, sceneStart: 0, sceneEnd: 6, words: [{ w: "word", start: 0, end: 6 }] });
+    for (const v of [p.open, p.blink, p.happy, p.gesture, p.brow]) assert.ok(v >= 0 && v <= 1);
+    assert.ok(Math.abs(p.tilt) <= 3 && Math.abs(p.bob) <= 3);
+  }
+  const end = cartoonPose({ t: 5.9, sceneIndex: 2, sceneCount: 3, sceneStart: 0, sceneEnd: 6, words: [] });
+  assert.equal(end.happy, 1);
+});
+
+test("cartoon: every ported character has artwork and a pose function", async () => {
+  const { CHARACTER_LIST, CHARACTER_SVGS, CHARACTER_POSERS } = await import("../src/characters.generated.ts");
+  assert.ok(CHARACTER_LIST.length >= 4);
+  for (const c of CHARACTER_LIST) {
+    assert.match((CHARACTER_SVGS as Record<string, string>)[c.id], /^<svg[\s\S]*<\/svg>$/);
+    assert.equal(typeof (CHARACTER_POSERS as Record<string, unknown>)[c.id], "function");
+  }
 });

@@ -1,4 +1,5 @@
 import { decodeVoice } from "./audio.ts";
+import { type CharacterId, CHARACTERS, DEFAULT_CHARACTER } from "./cartoon.ts";
 import type { PhotoLayer } from "./parallax.ts";
 import { setupPhotos } from "./photos.ts";
 import type { StyleId } from "./styles.ts";
@@ -23,6 +24,7 @@ export type Job = {
   topic?: string;
   keys: { pexels?: string; pixabay?: string };
   photos?: PhotoLayer[];
+  character?: CharacterId;
   seed: number;
 };
 
@@ -99,10 +101,20 @@ function init() {
   };
   document.querySelectorAll<HTMLInputElement>('input[name="fmt"]').forEach((r) => (r.onchange = syncPhone));
   let style: StyleId = "story";
-  const syncPicker = buildStylePicker(
+  let character: CharacterId = DEFAULT_CHARACTER;
+  const charPicker = $("charPicker");
+  charPicker.innerHTML = CHARACTERS.map((c) => `<button type="button" class="style-opt" data-char="${c.id}" aria-pressed="false">${c.name} <span class="hint">${c.role}</span></button>`).join("");
+  const syncChars = () => {
+    $("charBox").hidden = style !== "cartoon";
+    charPicker.querySelectorAll<HTMLButtonElement>("[data-char]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.char === character)));
+  };
+  charPicker.querySelectorAll<HTMLButtonElement>("[data-char]").forEach((b) => (b.onclick = () => ((character = b.dataset.char as CharacterId), syncChars())));
+  const stylePicker = buildStylePicker(
     () => style,
-    (id) => (style = id),
+    (id) => ((style = id), syncChars()),
   );
+  const syncPicker = () => (stylePicker(), syncChars());
+  syncChars();
   const goMake = () => document.getElementById("make")?.scrollIntoView({ behavior: "smooth", block: "start" });
   buildGallery(
     (id) => {
@@ -144,6 +156,7 @@ function init() {
       style,
       topic,
       photos: photoBox.get(),
+      character,
     };
   });
   const showVideo = (on: boolean) => {
@@ -239,6 +252,7 @@ function init() {
         style,
         topic: topicBox.value.trim(),
         photos: photoBox.get(),
+        character,
         keys: { pexels: $<HTMLInputElement>("pexelsKey").value.trim() || undefined, pixabay: $<HTMLInputElement>("pixabayKey").value.trim() || undefined },
         seed: Math.floor(Math.random() * 1e9),
       };

@@ -10,7 +10,7 @@ export function buildGallery(onUse: (id: StyleId) => void, onGoal: (g: Goal) => 
   if (grid) {
     grid.innerHTML = TEMPLATES.map(
       (t, i) => `
-      <article class="tile ${i === 0 ? "tile-big" : ""} ${t.id === "news" ? "tile-wide" : ""}" data-style="${t.id}">
+      <article class="tile ${i === 0 ? "tile-big" : ""} ${t.id === "news" || t.id === "cartoon" ? "tile-wide" : ""}" data-style="${t.id}">
         <canvas aria-label="${esc(t.name)} template preview"></canvas>
         <div class="tile-info">
           <h3>${esc(t.name)}</h3>

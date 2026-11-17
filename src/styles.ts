@@ -4,7 +4,7 @@ import { cover, dotGrid, FONT, type Frame, RTL, URDU_FONT, wipe } from "./draw.t
 import { clamp01, easeInOutCubic, easeOutBack, easeOutCubic } from "./ease.ts";
 import { type Word, wrapWords } from "./timing.ts";
 
-export type StyleId = "story" | "pop" | "clean" | "neon" | "chat" | "news";
+export type StyleId = "story" | "pop" | "clean" | "neon" | "chat" | "news" | "cartoon";
 const C = BRAND.colors;
 
 function words(f: Frame): Word[] {
@@ -374,7 +374,7 @@ function news(ctx: CanvasRenderingContext2D, f: Frame, local: number) {
   ctx.restore();
 }
 
-const PAINTERS: Record<Exclude<StyleId, "story">, (ctx: CanvasRenderingContext2D, f: Frame, local: number) => void> = { pop, clean, neon, chat, news };
+const PAINTERS: Record<Exclude<StyleId, "story">, (ctx: CanvasRenderingContext2D, f: Frame, local: number) => void> = { pop, clean, neon, chat, news, cartoon };
 
 export function paintStyle(style: Exclude<StyleId, "story">, ctx: CanvasRenderingContext2D, f: Frame, local: number) {
   ctx.save();
@@ -382,4 +382,163 @@ export function paintStyle(style: Exclude<StyleId, "story">, ctx: CanvasRenderin
   ctx.restore();
   const since = f.t - f.sceneStart;
   if (style !== "pop" && f.sceneIndex > 0 && since < 0.5) wipe(ctx, f.w, f.h, easeInOutCubic(clamp01(since / 0.5)));
+}
+
+// ---- Cartoon: one of our own characters presents the script from a speech bubble, in a flat 2D room. ----
+
+type Room = (ctx: CanvasRenderingContext2D, w: number, h: number, t: number) => void;
+
+function rect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, c: string, r = 0) {
+  ctx.fillStyle = c;
+  ctx.beginPath();
+  ctx.roundRect(x, y, w, h, r);
+  ctx.fill();
+}
+
+const office: Room = (ctx, w, h, t) => {
+  rect(ctx, 0, 0, w, h, "#FFE8D6");
+  rect(ctx, 0, h * 0.78, w, h * 0.22, "#E9C4A6");
+  const ww = w * 0.36;
+  const wx = w * 0.58;
+  rect(ctx, wx, h * 0.12, ww, h * 0.34, "#14142B", w * 0.02);
+  const sky = ctx.createLinearGradient(0, h * 0.13, 0, h * 0.45);
+  sky.addColorStop(0, "#8EC5FF");
+  sky.addColorStop(1, "#FFD6A5");
+  ctx.fillStyle = sky;
+  ctx.fillRect(wx + w * 0.012, h * 0.125, ww - w * 0.024, h * 0.33);
+  ctx.fillStyle = "rgba(255,255,255,0.9)";
+  const cx = wx + ((t * w * 0.01) % ww);
+  ctx.beginPath();
+  ctx.ellipse(Math.min(cx, wx + ww - w * 0.06), h * 0.2, w * 0.045, h * 0.012, 0, 0, Math.PI * 2);
+  ctx.fill();
+  rect(ctx, wx + ww / 2 - w * 0.004, h * 0.12, w * 0.008, h * 0.34, "#14142B");
+  // plant
+  rect(ctx, w * 0.06, h * 0.66, w * 0.1, h * 0.12, "#FF4D6D", w * 0.015);
+  ctx.fillStyle = "#2E8B57";
+  for (let k = 0; k < 5; k++) {
+    ctx.beginPath();
+    ctx.ellipse(w * 0.11 + Math.cos(k) * w * 0.04, h * 0.62 - k * h * 0.012, w * 0.025, h * 0.04, k - 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+};
+
+const shop: Room = (ctx, w, h) => {
+  rect(ctx, 0, 0, w, h, "#FFF4E6");
+  for (let s = 0; s < 3; s++) {
+    const y = h * (0.16 + s * 0.17);
+    rect(ctx, w * 0.04, y + h * 0.12, w * 0.92, h * 0.015, "#8B5E3C");
+    const colors = ["#FF4D6D", "#FFB703", "#2E86AB", "#7B2CBF", "#2E8B57"];
+    for (let b = 0; b < 9; b++) rect(ctx, w * (0.06 + b * 0.1), y + h * (0.05 - (b % 3) * 0.01), w * 0.07, h * (0.07 + (b % 3) * 0.01), colors[(b + s) % 5], w * 0.008);
+  }
+  for (let k = 0; k < 8; k++) rect(ctx, (k * w) / 8, 0, w / 8, h * 0.07, k % 2 ? "#FFFFFF" : "#FF4D6D");
+  rect(ctx, 0, h * 0.8, w, h * 0.2, "#D9B48F");
+};
+
+const street: Room = (ctx, w, h, t) => {
+  const sky = ctx.createLinearGradient(0, 0, 0, h * 0.7);
+  sky.addColorStop(0, "#FFB38A");
+  sky.addColorStop(1, "#FFE8D6");
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = "#FFB703";
+  ctx.beginPath();
+  ctx.arc(w * 0.78, h * 0.18, Math.min(w, h) * 0.07, 0, Math.PI * 2);
+  ctx.fill();
+  const tones = ["#7B5BA6", "#5E4B8B", "#8E6CC0", "#6A4F9A"];
+  for (let k = 0; k < 7; k++) {
+    const bw = w * 0.17;
+    const bh = h * (0.28 + ((k * 37) % 5) * 0.05);
+    const x = k * w * 0.15 - w * 0.03 + Math.sin(t * 0.05) * 2;
+    rect(ctx, x, h * 0.78 - bh, bw, bh, tones[k % 4]);
+    ctx.fillStyle = "rgba(255,214,165,0.85)";
+    for (let r = 0; r < 4; r++) for (let c = 0; c < 2; c++) if ((k + r + c) % 3) ctx.fillRect(x + bw * (0.18 + c * 0.42), h * 0.78 - bh + bh * (0.1 + r * 0.2), bw * 0.22, bh * 0.08);
+  }
+  rect(ctx, 0, h * 0.78, w, h * 0.22, "#3D3D5C");
+  ctx.fillStyle = "#FFF4E6";
+  for (let x = ((-t * w * 0.05) % (w * 0.2)) - w * 0.2; x < w; x += w * 0.2) ctx.fillRect(x, h * 0.885, w * 0.1, h * 0.008);
+};
+
+const home: Room = (ctx, w, h) => {
+  rect(ctx, 0, 0, w, h, "#E3F2EF");
+  for (let x = 0; x < w; x += w * 0.06) rect(ctx, x, 0, w * 0.025, h * 0.78, "rgba(46,139,87,0.08)");
+  rect(ctx, 0, h * 0.78, w, h * 0.22, "#C9A27E");
+  rect(ctx, w * 0.1, h * 0.14, w * 0.26, h * 0.18, "#14142B", w * 0.01);
+  rect(ctx, w * 0.115, h * 0.152, w * 0.23, h * 0.156, "#FFB703", w * 0.006);
+  ctx.fillStyle = "#FF4D6D";
+  ctx.beginPath();
+  ctx.arc(w * 0.23, h * 0.24, Math.min(w, h) * 0.04, 0, Math.PI * 2);
+  ctx.fill();
+  rect(ctx, w * 0.72, h * 0.3, w * 0.012, h * 0.48, "#14142B");
+  ctx.fillStyle = "#FFB703";
+  ctx.beginPath();
+  ctx.moveTo(w * 0.66, h * 0.32);
+  ctx.lineTo(w * 0.79, h * 0.32);
+  ctx.lineTo(w * 0.75, h * 0.24);
+  ctx.lineTo(w * 0.7, h * 0.24);
+  ctx.fill();
+};
+
+const ROOMS: Room[] = [office, shop, street, home];
+
+function cartoon(ctx: CanvasRenderingContext2D, f: Frame, local: number) {
+  const { w, h } = f;
+  const u = Math.min(w, h);
+  const portrait = h >= w;
+  if (f.clip) {
+    cover(ctx, f.clip, w, h, 1 + 0.04 * local);
+    ctx.fillStyle = "rgba(255,244,230,0.18)";
+    ctx.fillRect(0, 0, w, h);
+  } else ROOMS[f.sceneIndex % ROOMS.length](ctx, w, h, f.t);
+
+  // The character, standing at the bottom (portrait) or on the left (landscape), with a soft floor shadow.
+  const ch = portrait ? h * 0.6 : h * 0.98;
+  const cw = ch * (500 / 720);
+  const cx = portrait ? (w - cw) / 2 : w * 0.04;
+  const cy = h - ch + (portrait ? h * 0.04 : h * 0.06);
+  ctx.fillStyle = "rgba(20,20,43,0.18)";
+  ctx.beginPath();
+  ctx.ellipse(cx + cw / 2, h - u * 0.01, cw * 0.42, u * 0.035, 0, 0, Math.PI * 2);
+  ctx.fill();
+  if (f.character) ctx.drawImage(f.character, cx, cy, cw, ch);
+
+  // Speech bubble with the words, popping in at each scene.
+  const since = f.t - f.sceneStart;
+  const k = easeOutBack(since / 0.35);
+  const b = portrait ? { x: w * 0.07, y: h * 0.1, w: w * 0.86, h: h * 0.27 } : { x: w * 0.42, y: h * 0.14, w: w * 0.53, h: h * 0.5 };
+  const tail = portrait ? { x: w * 0.5, y: b.y + b.h + h * 0.05 } : { x: cx + cw * 0.86, y: h * 0.42 };
+  ctx.save();
+  const ox = portrait ? w / 2 : b.x;
+  const oy = b.y + b.h;
+  ctx.translate(ox, oy);
+  ctx.scale(k, k);
+  ctx.translate(-ox, -oy);
+  ctx.shadowColor = "rgba(20,20,43,0.25)";
+  ctx.shadowBlur = u * 0.03;
+  ctx.shadowOffsetY = u * 0.01;
+  ctx.fillStyle = "#FFFFFF";
+  ctx.beginPath();
+  ctx.roundRect(b.x, b.y, b.w, b.h, u * 0.05);
+  ctx.fill();
+  ctx.shadowColor = "transparent";
+  ctx.beginPath();
+  if (portrait) {
+    ctx.moveTo(tail.x - w * 0.05, b.y + b.h - 2);
+    ctx.lineTo(tail.x, tail.y);
+    ctx.lineTo(tail.x + w * 0.05, b.y + b.h - 2);
+  } else {
+    ctx.moveTo(b.x + 2, b.y + b.h * 0.55);
+    ctx.lineTo(tail.x, tail.y);
+    ctx.lineTo(b.x + 2, b.y + b.h * 0.8);
+  }
+  ctx.fill();
+  ctx.lineWidth = Math.max(2, u * 0.006);
+  ctx.strokeStyle = C.ink;
+  ctx.beginPath();
+  ctx.roundRect(b.x, b.y, b.w, b.h, u * 0.05);
+  ctx.stroke();
+  ctx.restore();
+  if (k > 0.5) {
+    const pad = u * 0.045;
+    revealText(ctx, f, { x: b.x + pad, y: b.y + pad * 0.8, w: b.w - pad * 2, h: b.h - pad * 1.6, align: "center" }, { weight: 800, color: C.ink, dim: "rgba(20,20,43,0.13)", active: C.coral, start: u * (portrait ? 0.075 : 0.08) });
+  }
 }

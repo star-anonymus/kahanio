@@ -6,8 +6,10 @@ import type { Scene } from "./script.ts";
 import { captionChunks, findIndex, sceneTimings } from "./timing.ts";
 import { motionAt, motionForScene } from "./motion.ts";
 import { ParallaxRenderer, type PhotoLayer } from "./parallax.ts";
+import { CharacterRig, type CharacterId, DEFAULT_CHARACTER } from "./cartoon.ts";
+import { cartoonPose } from "./cartoon-motion.ts";
 
-export type PreviewState = { scenes: Scene[]; format: Format; aiLabel: boolean; style: StyleId; topic: string; photos?: PhotoLayer[] };
+export type PreviewState = { scenes: Scene[]; format: Format; aiLabel: boolean; style: StyleId; topic: string; photos?: PhotoLayer[]; character?: CharacterId };
 
 export function startPreview(canvas: HTMLCanvasElement, getState: () => PreviewState) {
   const ctx = canvas.getContext("2d", { alpha: false });
@@ -17,6 +19,7 @@ export function startPreview(canvas: HTMLCanvasElement, getState: () => PreviewS
   let caps: ReturnType<typeof captionChunks>[] = [];
   let t0 = performance.now();
   let parallax: ParallaxRenderer | null = null;
+  let rig: CharacterRig | null = null;
 
   const frame = (now: number) => {
     requestAnimationFrame(frame);
@@ -55,7 +58,13 @@ export function startPreview(canvas: HTMLCanvasElement, getState: () => PreviewS
           clip = null;
         }
       }
-      drawScene(ctx, { w, h, t, total: body, sceneIndex: i, sceneCount: spans.length, sceneStart: spans[i].start, sceneEnd: spans[i].end, clip, captions: caps[i], aiLabel: s.aiLabel, style: s.style, topic: s.topic });
+      let character: HTMLImageElement | null = null;
+      if (s.style === "cartoon") {
+        const id = s.character ?? DEFAULT_CHARACTER;
+        if (!rig || rig.id !== id) rig = new CharacterRig(id);
+        character = rig.frameNow(cartoonPose({ t, sceneIndex: i, sceneCount: spans.length, sceneStart: spans[i].start, sceneEnd: spans[i].end, words: caps[i].flatMap((c) => c.words) }));
+      }
+      drawScene(ctx, { character, w, h, t, total: body, sceneIndex: i, sceneCount: spans.length, sceneStart: spans[i].start, sceneEnd: spans[i].end, clip, captions: caps[i], aiLabel: s.aiLabel, style: s.style, topic: s.topic });
     } else drawEndCard(ctx, w, h, t - body, [], s.aiLabel);
   };
   requestAnimationFrame(frame);

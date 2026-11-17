@@ -10,6 +10,7 @@ export const TEMPLATES: Template[] = [
   { id: "clean", name: "Clean", blurb: "Calm cream page, words that darken as they are read.", sample: ["Good work speaks quietly.", "Show one clear result.", "Let the client ask for more."] },
   { id: "neon", name: "Neon Night", blurb: "Glowing captions over a moving synth grid.", sample: ["Late night idea.", "Build it before morning.", "Ship it tomorrow."] },
   { id: "chat", name: "Chat", blurb: "Each scene arrives as a chat message.", sample: ["Can anyone build me a website?", "Yes! Here are three examples of my work.", "Perfect, let us talk today."] },
+  { id: "cartoon", name: "Cartoon", blurb: "A 2D cartoon character says your script, with lip-sync.", sample: ["Salaam! Want more clients?", "People ask for your service online every day.", "Answer them first, and answer well."] },
   { id: "news", name: "Headline", blurb: "Headline card, label and a ticker with your topic.", sample: ["Most small shops still have no website.", "Customers search online before they visit.", "A simple site can change that."] },
 ];
 
@@ -55,6 +56,14 @@ export const GOALS: Goal[] = [
     style: "news",
     format: "16:9",
     starter: (t) => [`What you should know about ${t}.`, "Point one: the basics, in one line.", "Point two: the common mistake.", "Point three: what to do next."],
+  },
+  {
+    id: "cartoon",
+    title: "Cartoon explainer",
+    text: "A 2D cartoon character explains it for you.",
+    style: "cartoon",
+    format: "9:16",
+    starter: (t) => [`Salaam! Let us talk about ${t}.`, "Here is the simple version.", "Start with one small step today.", "Then do it again tomorrow.", "Follow for more!"],
   },
   {
     id: "quote",

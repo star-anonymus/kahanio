@@ -26,7 +26,7 @@ export async function autorun(runJob: RunJob) {
       await box.addFromUrls(photoUrls.map((p) => "/" + p), q.get("depth") !== "0");
     }
     const res = await runJob(
-      { scenes: parseScript(sample.script), format: sample.format, music: true, aiLabel: true, keys: {}, seed: sample.seed, style: sample.style, topic: sample.topic, photos: box?.get() },
+      { scenes: parseScript(sample.script), format: sample.format, music: true, aiLabel: true, keys: {}, seed: sample.seed, style: (q.get("style") as Job["style"]) ?? sample.style, topic: sample.topic, photos: box?.get(), character: (q.get("char") as Job["character"]) ?? undefined },
       (f, label) => (window.__devStatus = `${label} ${Math.round(f * 100)}%`),
     );
     const target = out && /^[a-z0-9-]+$/.test(out) ? `/__save?name=${out}&dir=photo` : `/__save?name=${name}`;
