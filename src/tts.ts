@@ -69,7 +69,17 @@ function turnstileToken(): Promise<string> {
         document.getElementById("voiceBox")?.append(box);
       }
       box.innerHTML = "";
-      w.turnstile!.render(box, { sitekey: SITEKEY, callback: resolve, "error-callback": () => reject(new Error("The bot check did not load. Press Retry.")) });
+      // Never hang: stop after one failure or 25 seconds, with a reason the visitor can read.
+      const timer = setTimeout(() => reject(new Error("The bot check took too long. Press Retry.")), 25000);
+      w.turnstile!.render(box, {
+        sitekey: SITEKEY,
+        retry: "never",
+        callback: (t: string) => (clearTimeout(timer), resolve(t)),
+        "error-callback": (code: string) => {
+          clearTimeout(timer);
+          reject(new Error(`The bot check did not load (code ${code}). Press Retry.`));
+        },
+      });
     };
     if ((window as unknown as { turnstile?: unknown }).turnstile) return run();
     const s = document.createElement("script");
