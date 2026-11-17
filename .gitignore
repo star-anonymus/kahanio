@@ -5,3 +5,6 @@ samples-out/
 photo-out/
 dev-photos/
 *.local
+
+.vercel
+.env*
