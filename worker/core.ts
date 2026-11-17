@@ -75,3 +75,27 @@ export function corsHeaders(origin: string | null, allowed: string): Record<stri
     Vary: "Origin",
   };
 }
+
+// ---- Free stock footage (Pexels, with the owner's free key) ----
+
+export type StockRequest = { q: string; orientation: "portrait" | "landscape"; session: string };
+
+export function validateStock(body: unknown): StockRequest | { error: string } {
+  if (!body || typeof body !== "object") return { error: "Bad request." };
+  const b = body as Record<string, unknown>;
+  const q = typeof b.q === "string" ? b.q.replace(/[^\p{L}\p{N} -]/gu, " ").replace(/\s+/g, " ").trim().slice(0, 60) : "";
+  if (!q) return { error: "Missing search words." };
+  if (b.orientation !== "portrait" && b.orientation !== "landscape") return { error: "Bad orientation." };
+  if (typeof b.session !== "string" || b.session.length > 400) return { error: "Missing session. Reload the page and try again." };
+  return { q, orientation: b.orientation, session: b.session };
+}
+
+/** Only Pexels' own video CDN may be streamed through /clip (no open proxy). */
+export function isPexelsVideoUrl(u: string): boolean {
+  try {
+    const url = new URL(u);
+    return url.protocol === "https:" && url.hostname === "videos.pexels.com" && /\.mp4$/i.test(url.pathname);
+  } catch {
+    return false;
+  }
+}

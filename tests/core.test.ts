@@ -318,3 +318,15 @@ test("voice languages: English, Urdu, Hindi script with Urdu voice, and Hindi; g
   const all = [...TEMPLATES.flatMap((t) => t.sample), ...GOALS.flatMap((g) => g.starter("topic"))].join(" ");
   assert.doesNotMatch(all, /\b(Salaam|Namaste|Hello)\b|नमस्ते/);
 });
+
+test("worker stock: search words are cleaned; only Pexels video files can be streamed", async () => {
+  const { validateStock, isPexelsVideoUrl } = await import("../worker/core.ts");
+  assert.deepEqual(validateStock({ q: " laptop <b>office</b>!! ", orientation: "portrait", session: "s" }), { q: "laptop b office b", orientation: "portrait", session: "s" });
+  assert.ok("error" in validateStock({ q: "", orientation: "portrait", session: "s" }));
+  assert.ok("error" in validateStock({ q: "x", orientation: "square", session: "s" }));
+  assert.equal(isPexelsVideoUrl("https://videos.pexels.com/video-files/123/123-hd_1080_1920_25fps.mp4"), true);
+  assert.equal(isPexelsVideoUrl("http://videos.pexels.com/a.mp4"), false);
+  assert.equal(isPexelsVideoUrl("https://evil.example/videos.pexels.com/a.mp4"), false);
+  assert.equal(isPexelsVideoUrl("https://videos.pexels.com.evil.example/a.mp4"), false);
+  assert.equal(isPexelsVideoUrl("https://videos.pexels.com/a.html"), false);
+});

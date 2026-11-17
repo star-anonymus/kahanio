@@ -189,3 +189,18 @@ export async function speakScenes(scenes: Scene[], voice: VoiceOption, onStatus:
   });
   return { buffer: await mix.startRendering(), durations, engineUsed: engine, note };
 }
+
+// ---- Free stock footage through the same Worker (Pexels, owner's free key) ----
+export class StockUnavailable extends Error {}
+
+/** Finds one real clip for a scene. The clip streams through the Worker so the browser may draw it. */
+export async function findStockClip(keywords: string[], orientation: "portrait" | "landscape", used: Set<string>, onStatus: (s: string) => void): Promise<import("./stock.ts").Clip | null> {
+  const s = await onlineSession(onStatus);
+  const r = await fetch(`${TTS_URL}/stock`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ q: keywords.join(" ") || "city", orientation, session: s }) });
+  const j = (await r.json().catch(() => ({}))) as { clips?: { id: string; file: string; author: string; page: string }[]; error?: string };
+  if (r.status === 503) throw new StockUnavailable(j.error ?? "Stock footage is not set up yet.");
+  if (!r.ok) throw new Error(j.error ?? `Stock search failed (HTTP ${r.status}).`);
+  const c = (j.clips ?? []).find((x) => !used.has(x.id));
+  if (!c) return null;
+  return { id: c.id, url: `${TTS_URL}/clip?u=${encodeURIComponent(c.file)}&s=${encodeURIComponent(s)}`, credit: { source: "Pexels", author: c.author, url: c.page } };
+}

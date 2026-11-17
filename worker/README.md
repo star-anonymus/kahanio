@@ -29,6 +29,10 @@ npx.cmd wrangler deploy
 ```
 `SESSION_SECRET` is any long random text. Wrangler asks for each value; type it there, never in a chat or a file.
 
+## Free stock footage (optional, recommended)
+Get a free API key at pexels.com/api, then: `npx.cmd wrangler secret put PEXELS_KEY`. Searches are cached for a day;
+clips stream through the Worker (only from videos.pexels.com). Every video credits Pexels and the filmmakers.
+
 ## Connect the site
 Add two public values to the Vercel project `kahanio` (Settings -> Environment Variables, Production), then redeploy:
 ```

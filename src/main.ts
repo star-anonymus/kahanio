@@ -1,4 +1,5 @@
 import { decodeVoice } from "./audio.ts";
+import { findStockClip, onlineAvailable, StockUnavailable } from "./tts.ts";
 import { setupVoice } from "./voice-ui.ts";
 import { type CharacterId, CHARACTERS, DEFAULT_CHARACTER } from "./cartoon.ts";
 import type { PhotoLayer } from "./parallax.ts";
@@ -24,6 +25,8 @@ export type Job = {
   style?: StyleId;
   topic?: string;
   keys: { pexels?: string; pixabay?: string };
+  /** Real stock footage through our Worker when the visitor has no key of their own. */
+  autoStock?: boolean;
   photos?: PhotoLayer[];
   character?: CharacterId;
   sceneDurations?: number[];
@@ -43,6 +46,25 @@ export async function runJob(job: Job, onProgress: (f: number, label: string) =>
       if (c) used.add(c.id);
       else warnings.push(`No clip found for scene ${i + 1}; it uses the animated background.`);
       clips.push(c);
+    }
+  } else if (job.autoStock && onlineAvailable() && !(job.photos && job.photos.length)) {
+    const used = new Set<string>();
+    const orientation = job.format === "9:16" ? "portrait" : "landscape";
+    for (let i = 0; i < job.scenes.length; i++) {
+      onProgress(0.01, `Finding real footage ${i + 1}/${job.scenes.length}`);
+      try {
+        const c = await findStockClip(job.scenes[i].keywords, orientation, used, (m) => onProgress(0.01, m));
+        if (c) used.add(c.id);
+        else warnings.push(`No clip found for scene ${i + 1}; it uses the template background.`);
+        clips.push(c);
+      } catch (e) {
+        warnings.push(e instanceof StockUnavailable ? `${e.message} The video uses the template background.` : `Footage for scene ${i + 1}: ${(e as Error).message}`);
+        clips.push(null);
+        if (e instanceof StockUnavailable) {
+          while (clips.length < job.scenes.length) clips.push(null);
+          break;
+        }
+      }
     }
   } else job.scenes.forEach(() => clips.push(null));
   const res = await renderVideo({ ...job, clips }, onProgress, signal);
@@ -146,6 +168,7 @@ function init() {
       $<HTMLFormElement>("heroForm").requestSubmit();
     };
   });
+  if (!onlineAvailable()) $("stockAutoRow").hidden = true;
   const photoBox = setupPhotos(() => undefined);
   const voiceUi = setupVoice(() => parseScript(scriptBox.value));
   if (import.meta.env.DEV) (window as unknown as { __photos?: typeof photoBox }).__photos = photoBox;
@@ -268,6 +291,7 @@ function init() {
         photos: photoBox.get(),
         character,
         sceneDurations,
+        autoStock: ($("stockAuto") as HTMLInputElement | null)?.checked ?? false,
         keys: { pexels: $<HTMLInputElement>("pexelsKey").value.trim() || undefined, pixabay: $<HTMLInputElement>("pixabayKey").value.trim() || undefined },
         seed: Math.floor(Math.random() * 1e9),
       };
