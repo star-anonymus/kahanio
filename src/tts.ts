@@ -56,6 +56,15 @@ function loadKokoro(onStatus: (s: string) => void): Promise<Kokoro> {
 }
 
 // ---- FameSpeak (through the Worker) ----
+/** fetch to our Worker with a readable error instead of the browser's bare "Failed to fetch". */
+async function reach(path: string, body: unknown, what: string): Promise<Response> {
+  try {
+    return await fetch(`${TTS_URL}${path}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  } catch {
+    throw new Error(`Could not reach the ${what} server. Check your connection (or turn off a blocker for kahanio-voice.kahanio-app.workers.dev) and press Retry.`);
+  }
+}
+
 let session: { token: string; exp: number } | null = null;
 
 // A token that arrived after we stopped waiting (the visitor ticked late). Cloudflare tokens live 300 s; reuse it on Retry.
@@ -131,7 +140,7 @@ async function onlineSession(onStatus: (s: string) => void, anchor?: HTMLElement
   if (pendingSession) return pendingSession;
   pendingSession = (async () => {
     const token = await turnstileToken(onStatus, anchor);
-    const r = await fetch(`${TTS_URL}/session`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ turnstile: token }) });
+    const r = await reach("/session", { turnstile: token }, "bot-check");
     const j = (await r.json().catch(() => ({}))) as { session?: string; error?: string };
     if (!r.ok || !j.session) throw new Error(j.error ?? "Could not start the session. Press Retry.");
     session = { token: j.session, exp: Date.now() + 14 * 60 * 1000 };
@@ -150,7 +159,7 @@ export class QuotaError extends Error {}
 /** One scene through the Worker. Waits and retries while the voice service is busy (it makes one voice at a time). */
 async function onlineScene(text: string, voice: string, onStatus: (s: string) => void): Promise<ArrayBuffer> {
   for (let attempt = 0; attempt < 6; attempt++) {
-    const r = await fetch(`${TTS_URL}/tts`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, voice, session: await onlineSession(onStatus) }) });
+    const r = await reach("/tts", { text, voice, session: await onlineSession(onStatus) }, "voice");
     if (r.ok) return r.arrayBuffer();
     const j = (await r.json().catch(() => ({}))) as { error?: string; busy?: boolean; quota?: boolean };
     if (r.status === 401 && attempt === 0) {
@@ -233,7 +242,7 @@ export class StockUnavailable extends Error {}
 /** Finds one real clip for a scene. The clip streams through the Worker so the browser may draw it. */
 export async function findStockClip(keywords: string[], orientation: "portrait" | "landscape", used: Set<string>, onStatus: (s: string) => void): Promise<import("./stock.ts").Clip | null> {
   const s = await onlineSession(onStatus);
-  const r = await fetch(`${TTS_URL}/stock`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ q: keywords.join(" ") || "city", orientation, session: s }) });
+  const r = await reach("/stock", { q: keywords.join(" ") || "city", orientation, session: s }, "stock footage");
   const j = (await r.json().catch(() => ({}))) as { clips?: { id: string; file: string; author: string; page: string }[]; error?: string };
   if (r.status === 503) throw new StockUnavailable(j.error ?? "Stock footage is not set up yet.");
   if (!r.ok) throw new Error(j.error ?? `Stock search failed (HTTP ${r.status}).`);
