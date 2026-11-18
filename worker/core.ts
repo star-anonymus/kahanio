@@ -99,3 +99,24 @@ export function isPexelsVideoUrl(u: string): boolean {
     return false;
   }
 }
+
+export type ScriptRequest = { topic: string; lang: "en" | "ur" | "hi"; seconds: number; platformSafe: boolean; session: string };
+
+/** /script input: a short topic, a known language, a sane length. Nothing else reaches the AI. */
+export function validateScript(body: unknown): ScriptRequest | { error: string } {
+  if (!body || typeof body !== "object") return { error: "Bad request." };
+  const b = body as Record<string, unknown>;
+  const topic = typeof b.topic === "string" ? b.topic.replace(/[\u0000-\u001f]/g, " ").replace(/\s+/g, " ").trim().slice(0, 160) : "";
+  if (topic.length < 3) return { error: "Write a topic first (a few words)." };
+  if (b.lang !== "en" && b.lang !== "ur" && b.lang !== "hi") return { error: "Unknown language." };
+  const seconds = Number(b.seconds);
+  if (![20, 30, 45, 60].includes(seconds)) return { error: "Unknown length." };
+  if (typeof b.session !== "string" || b.session.length > 400) return { error: "Missing session. Reload the page and try again." };
+  return { topic, lang: b.lang, seconds, platformSafe: b.platformSafe === true, session: b.session };
+}
+
+/** Free AI models the Worker tries in order, with the owner's free keys (Worker secrets). */
+export const SCRIPT_MODELS = [
+  { id: "groq", url: "https://api.groq.com/openai/v1/chat/completions", model: "openai/gpt-oss-120b", keyName: "GROQ_KEY", json: true },
+  { id: "gemini", url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", model: "gemini-flash-latest", keyName: "GEMINI_KEY", json: true },
+] as const;

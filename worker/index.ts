@@ -3,13 +3,16 @@
 // 15-minute session token; a per-IP rate limit on top. Nothing is stored.
 // FameSpeak's API is async and allows one generation at a time on the current plan, so this waits its turn,
 // polls until the audio is ready, then streams it back.
-import { corsHeaders, FAMESPEAK_API, isPexelsVideoUrl, ONLINE_VOICES, signSession, validateStock, validateTts, verifySession } from "./core.ts";
+import { corsHeaders, FAMESPEAK_API, isPexelsVideoUrl, ONLINE_VOICES, SCRIPT_MODELS, signSession, validateScript, validateStock, validateTts, verifySession } from "./core.ts";
+import { buildMessages } from "../src/llm.ts";
 import { pexelsSearchUrl, pickPexelsFile, type PexelsVideo } from "../src/stock.ts";
 
 type RateLimiter = { limit(o: { key: string }): Promise<{ success: boolean }> };
 export type Env = {
   FAMESPEAK_KEY: string; // secret: wrangler secret put FAMESPEAK_KEY
   PEXELS_KEY?: string; // secret: wrangler secret put PEXELS_KEY (free key from pexels.com/api)
+  GROQ_KEY?: string; // secret: free key from console.groq.com/keys (script writing)
+  GEMINI_KEY?: string; // secret: free key from aistudio.google.com/apikey (script fallback)
   TURNSTILE_SECRET: string; // secret
   SESSION_SECRET: string; // secret: any long random string
   ALLOWED_ORIGINS: string; // e.g. "https://kahanio.clientorahq.com,http://localhost:4830"
@@ -97,6 +100,30 @@ export default {
         .filter((c) => c.file)
         .slice(0, 6);
       return json({ clips }, 200, cors);
+    }
+
+    if (path === "/script") {
+      const r = validateScript(body);
+      if ("error" in r) return json(r, 400, cors);
+      if (!(await verifySession(env.SESSION_SECRET, r.session, ip))) return json({ error: "Your session expired. Press Retry." }, 401, cors);
+      const messages = buildMessages(r.topic, r.lang, r.seconds, { platformSafe: r.platformSafe });
+      let lastStatus = 0;
+      for (const m of SCRIPT_MODELS) {
+        const key = (env as unknown as Record<string, string | undefined>)[m.keyName];
+        if (!key) continue;
+        const res = await fetch(m.url, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ model: m.model, messages, temperature: 0.8, ...(m.json ? { response_format: { type: "json_object" } } : {}) }),
+        });
+        lastStatus = res.status;
+        if (!res.ok) continue; // busy or refused: try the next free model
+        const data = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+        const text = data.choices?.[0]?.message?.content;
+        if (text) return json({ text, model: m.id }, 200, cors);
+      }
+      if (!lastStatus) return json({ error: "Free AI scripts are not set up yet. Write the script yourself or use your own key." }, 503, cors);
+      return json({ error: "The free AI is busy right now. Wait a minute and press Get script again." }, 429, cors);
     }
 
     if (path === "/tts") {

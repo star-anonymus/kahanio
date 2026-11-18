@@ -11,32 +11,66 @@ export const PROVIDERS: Provider[] = [
 
 export type ScriptLang = "en" | "ur" | "hi";
 
-export function buildMessages(topic: string, lang: ScriptLang, seconds: number) {
+export type ScriptOptions = { platformSafe?: boolean };
+
+/** The rules every AI script follows: a structure that holds attention on short-video feeds, facts only. */
+export const VIRAL_RULES = [
+  "Scene 1 is the hook, under 10 words: a surprising truth, a question the viewer feels, or a bold claim you can back up. Never open with a greeting or \"In this video\".",
+  "Scene 2 opens a loop: name the problem or promise what they will get by the end.",
+  "Middle scenes give the value: one clear point, step or example per scene, concrete and specific.",
+  "The last scene is a soft call to action: follow, save, comment one word, or try the product. Only one ask.",
+  "Talk to one person (\"you\"). Spoken style, short sentences (under 14 words), no filler, no jargon.",
+];
+
+export function buildMessages(topic: string, lang: ScriptLang, seconds: number, opts: ScriptOptions = {}) {
   const scenes = Math.max(4, Math.min(10, Math.round(seconds / 5)));
   const language = lang === "ur" ? "Urdu in Urdu script" : lang === "hi" ? "everyday spoken Urdu (Hindustani) written in Hindi Devanagari script" : "simple English";
+  const safe = opts.platformSafe
+    ? " Platform-safe: no digits, no prices, no currency, no links or website addresses, no QR codes, no phone numbers (write small numbers as words)."
+    : "";
   return [
     {
       role: "system",
       content:
-        "You write scripts for short vertical videos. Facts only: never invent numbers, quotes, prices or studies. " +
-        'No hashtags, no emojis. Reply with JSON only: {"scenes":[{"text":"...","keywords":["...","..."]}]}. ' +
-        'keywords are 1-3 English words for searching stock video (things a camera can film, e.g. "laptop office"). ' +
+        "You write scripts for short vertical videos that people watch to the end and share. Facts only: never invent numbers, quotes, prices, results or studies. " +
+        VIRAL_RULES.join(" ") +
+        " No hashtags, no emojis in the scenes." +
+        safe +
+        ' Reply with JSON only: {"scenes":[{"text":"...","keywords":["...","..."]}],"caption":"...","hashtags":["...","..."]}. ' +
+        'keywords are 1-3 English words for searching stock video (things a camera can film, e.g. "laptop office"). caption is one or two lines for the post, in the same language; hashtags are 3-5 relevant ones without the # sign. ' +
         'If the script greets the viewer, use the Islamic greeting "Assalam o Alaikum" (in the script of the chosen language), never another greeting.',
     },
     {
       role: "user",
-      content: `Topic: ${topic}\nLanguage of the text: ${language}\nAbout ${seconds} seconds, ${scenes} scenes, one or two short sentences each. Scene 1 is a hook; the last scene is a soft call to action.`,
+      content: `Topic: ${topic}
+Language of the text: ${language}
+About ${seconds} seconds, ${scenes} scenes, one or two short sentences each.`,
     },
   ];
 }
 
-export async function writeScript(p: Provider, key: string, topic: string, lang: ScriptLang, seconds: number, signal?: AbortSignal): Promise<string> {
+/** Caption and hashtags from an AI reply (when it sent them). */
+export function parseExtras(raw: string): { caption: string; hashtags: string[] } {
+  const m = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+  try {
+    const j = JSON.parse((m ? m[1] : raw).trim()) as { caption?: unknown; hashtags?: unknown };
+    const caption = typeof j.caption === "string" ? j.caption.trim().slice(0, 600) : "";
+    const hashtags = Array.isArray(j.hashtags)
+      ? j.hashtags.filter((h): h is string => typeof h === "string").map((h) => h.replace(/^#/, "").replace(/\s+/g, "")).filter(Boolean).slice(0, 5)
+      : [];
+    return { caption, hashtags };
+  } catch {
+    return { caption: "", hashtags: [] };
+  }
+}
+
+export async function writeScript(p: Provider, key: string, topic: string, lang: ScriptLang, seconds: number, signal?: AbortSignal, opts: ScriptOptions = {}): Promise<string> {
   let res: Response;
   try {
     res = await fetch(`${p.baseURL}/chat/completions`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
-      body: JSON.stringify({ model: p.model, messages: buildMessages(topic, lang, seconds), temperature: 0.7 }),
+      body: JSON.stringify({ model: p.model, messages: buildMessages(topic, lang, seconds, opts), temperature: 0.7 }),
       signal,
     });
   } catch {

@@ -141,7 +141,7 @@ test("every sample script parses into 5-6 scenes with keywords", () => {
     const s = JSON.parse(readFileSync(new URL(f, dir), "utf8"));
     const scenes = parseScript(s.script);
     assert.ok(scenes.length >= 5 && scenes.length <= 6, f);
-    assert.ok(["story", "pop", "clean", "neon", "chat", "news", "cartoon"].includes(s.style), f);
+    assert.ok(["story", "pop", "clean", "neon", "chat", "news", "cartoon", "real"].includes(s.style), f);
     assert.ok(scenes.every((x) => x.keywords.length > 0), f);
   }
 });
@@ -167,7 +167,7 @@ test("easing curves start at 0, end at 1, and clamp", async () => {
 
 test("templates and goals are complete and their starters parse", async () => {
   const { TEMPLATES, GOALS, sampleScenes } = await import("../src/templates.ts");
-  assert.equal(new Set(TEMPLATES.map((t) => t.id)).size, 7);
+  assert.equal(new Set(TEMPLATES.map((t) => t.id)).size, 8);
   for (const t of TEMPLATES) assert.ok(sampleScenes(t).length >= 3, t.id);
   for (const g of GOALS) {
     assert.ok(TEMPLATES.some((t) => t.id === g.style), g.id);
@@ -347,4 +347,42 @@ test("SEO guide pages: titles under 60, descriptions under 160, one H1, FAQ in s
     assert.ok(sitemap.includes(`/${g.slug}<`) && llms.includes(`/${g.slug})`), g.slug);
     assert.doesNotMatch(html, /reelora|moneyprinter/i);
   }
+});
+
+test("checkScript: a good script is ready, problems are named in plain words", async () => {
+  const { checkScript, recipeExample } = await import("../src/scriptcheck.ts");
+  const good = checkScript(parseScript(recipeExample("cold email").join("\n")));
+  assert.equal(good.verdict, "ready", JSON.stringify(good.items));
+  assert.ok(good.seconds >= 10 && good.seconds <= 45);
+  const bad = checkScript(parseScript("Hello everyone, welcome to my channel and today we talk about websites\nVisit www.example.com for $99 #web 🚀"), { platformSafe: true });
+  assert.equal(bad.verdict, "fix");
+  const text = bad.items.map((i) => i.text).join(" ");
+  assert.match(text, /greeting/);
+  assert.match(text, /emojis and hashtags/);
+  assert.match(text, /link or web address/);
+  assert.match(text, /price/);
+  assert.equal(checkScript([]).verdict, "fix");
+  const urdu = checkScript(parseScript("کیا آپ کو کلائنٹ نہیں مل رہے؟\nلوگ روز سروس مانگتے ہیں۔\nانہیں پہلے جواب دیں۔\nمزید کے لیے فالو کریں۔"));
+  assert.notEqual(urdu.verdict, "fix", JSON.stringify(urdu.items));
+});
+
+test("buildMessages carries the viral rules and the platform-safe switch; parseExtras reads caption and hashtags", async () => {
+  const { buildMessages, parseExtras, VIRAL_RULES } = await import("../src/llm.ts");
+  const m = buildMessages("cold email", "en", 30, { platformSafe: true });
+  assert.ok(VIRAL_RULES.every((r) => m[0].content.includes(r)));
+  assert.match(m[0].content, /no digits, no prices/);
+  assert.doesNotMatch(buildMessages("x", "en", 30)[0].content, /no digits/);
+  assert.deepEqual(parseExtras('```json\n{"scenes":[],"caption":"Hi there","hashtags":["#freelance","web design"]}\n```'), { caption: "Hi there", hashtags: ["freelance", "webdesign"] });
+  assert.deepEqual(parseExtras("not json"), { caption: "", hashtags: [] });
+});
+
+test("worker validateScript accepts a clean request and refuses bad ones", async () => {
+  const { validateScript, SCRIPT_MODELS } = await import("../worker/core.ts");
+  assert.deepEqual(validateScript({ topic: "  Cold\nemail tips ", lang: "ur", seconds: 30, platformSafe: true, session: "s" }), { topic: "Cold email tips", lang: "ur", seconds: 30, platformSafe: true, session: "s" });
+  assert.ok("error" in validateScript({ topic: "a", lang: "en", seconds: 30, session: "s" }));
+  assert.ok("error" in validateScript({ topic: "valid topic", lang: "fr", seconds: 30, session: "s" }));
+  assert.ok("error" in validateScript({ topic: "valid topic", lang: "en", seconds: 999, session: "s" }));
+  assert.ok("error" in validateScript({ topic: "valid topic", lang: "en", seconds: 30 }));
+  assert.equal(validateScript({ topic: "x".repeat(500), lang: "en", seconds: 20, session: "s" }).hasOwnProperty("topic") && (validateScript({ topic: "x".repeat(500), lang: "en", seconds: 20, session: "s" }) as { topic: string }).topic.length, 160);
+  assert.deepEqual(SCRIPT_MODELS.map((m) => m.keyName), ["GROQ_KEY", "GEMINI_KEY"]);
 });

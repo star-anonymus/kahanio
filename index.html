@@ -97,25 +97,50 @@
             </div>
 
             <div class="seg" role="radiogroup" aria-label="Script source">
-              <label><input type="radio" name="src" value="own" checked /><span>I'll write it</span></label>
-              <label><input type="radio" name="src" value="ai" /><span>Free AI</span></label>
-              <label><input type="radio" name="src" value="template" /><span>Quick starter</span></label>
+              <label><input type="radio" name="src" value="ai" checked /><span>✦ Free AI writes it</span></label>
+              <label><input type="radio" name="src" value="own" /><span>I'll write it</span></label>
+              <label><input type="radio" name="src" value="template" /><span>Simple recipe</span></label>
             </div>
-            <p class="hint" id="srcHint">Your own words work best: platforms favour original voices.</p>
+            <p class="hint" id="srcHint">Free, no key needed. Read it and make it yours before you post.</p>
 
-            <div id="aiBox" class="sub" hidden>
+            <div id="aiBox" class="sub">
               <div class="grid2">
-                <label>Provider <select id="provider"></select></label>
-                <label>API key <input id="aiKey" type="password" autocomplete="off" placeholder="Stays in this tab" /></label>
                 <label>Language <select id="lang"><option value="en">English</option><option value="ur">Urdu (اردو)</option><option value="hi">Hindi script, Urdu style (हिंदी)</option></select></label>
                 <label>Length <select id="seconds"><option value="20">About 20 s</option><option value="30" selected>About 30 s</option><option value="45">About 45 s</option></select></label>
               </div>
-              <p class="hint" id="providerNote"></p>
+              <label class="check"><input type="checkbox" id="platformSafe" checked /> TikTok-safe: no numbers, prices or links in the video</label>
+              <details>
+                <summary class="hint">Use my own AI key instead</summary>
+                <div class="grid2">
+                  <label>Provider <select id="provider"></select></label>
+                  <label>API key <input id="aiKey" type="password" autocomplete="off" placeholder="Stays in this tab" /></label>
+                </div>
+                <p class="hint" id="providerNote"></p>
+              </details>
             </div>
-            <button type="button" id="draft" class="ghost small">✦ Get script</button>
+            <button type="button" id="draft" class="primary small">✦ Write my script</button>
+            <p id="draftStatus" class="hint" aria-live="polite"></p>
 
-            <label for="script">Script <span class="hint">one scene per line, optional search words in [brackets]</span></label>
-            <textarea id="script" dir="auto" rows="7" placeholder="Clients are already asking for your service online. [laptop, office]"></textarea>
+            <label for="script">Script <span class="hint">one scene per line</span></label>
+            <textarea id="script" dir="auto" rows="7" placeholder="Scene 1: a short hook&#10;Scene 2: the problem&#10;Scene 3: a tip&#10;Scene 4: one ask (follow, save, try it)"></textarea>
+
+            <div id="checkBox" class="check-box" aria-live="polite" hidden>
+              <p class="check-verdict" id="checkVerdict"></p>
+              <ul id="checkList"></ul>
+            </div>
+
+            <div id="captionBox" class="sub" hidden>
+              <label for="aiCaption">Post caption from the AI <span class="hint">(for the description, not the video)</span></label>
+              <textarea id="aiCaption" dir="auto" rows="3"></textarea>
+              <button type="button" id="copyCaption" class="ghost small">Copy caption</button>
+            </div>
+
+            <details class="guide">
+              <summary>How to write a script that people watch to the end</summary>
+              <ol id="recipe"></ol>
+              <p class="hint">Tips: one idea per scene · short spoken sentences · speak to "you" · real facts only · no emojis or hashtags in the script (put them in the caption) · optional search words for footage in [brackets], e.g. "Shops still have no website [street, shop]".</p>
+              <button type="button" id="useRecipe" class="ghost small">Fill this recipe for my topic</button>
+            </details>
           </section>
 
           <section class="step">

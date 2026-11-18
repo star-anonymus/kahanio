@@ -4,7 +4,7 @@ import { cover, dotGrid, FONT, type Frame, RTL, URDU_FONT, wipe } from "./draw.t
 import { clamp01, easeInOutCubic, easeOutBack, easeOutCubic } from "./ease.ts";
 import { type Word, wrapWords } from "./timing.ts";
 
-export type StyleId = "story" | "pop" | "clean" | "neon" | "chat" | "news" | "cartoon";
+export type StyleId = "story" | "pop" | "clean" | "neon" | "chat" | "news" | "cartoon" | "real";
 const C = BRAND.colors;
 
 function words(f: Frame): Word[] {
@@ -374,14 +374,14 @@ function news(ctx: CanvasRenderingContext2D, f: Frame, local: number) {
   ctx.restore();
 }
 
-const PAINTERS: Record<Exclude<StyleId, "story">, (ctx: CanvasRenderingContext2D, f: Frame, local: number) => void> = { pop, clean, neon, chat, news, cartoon };
+const PAINTERS: Record<Exclude<StyleId, "story">, (ctx: CanvasRenderingContext2D, f: Frame, local: number) => void> = { pop, clean, neon, chat, news, cartoon, real };
 
 export function paintStyle(style: Exclude<StyleId, "story">, ctx: CanvasRenderingContext2D, f: Frame, local: number) {
   ctx.save();
   PAINTERS[style](ctx, f, local);
   ctx.restore();
   const since = f.t - f.sceneStart;
-  if (style !== "pop" && f.sceneIndex > 0 && since < 0.5) wipe(ctx, f.w, f.h, easeInOutCubic(clamp01(since / 0.5)));
+  if (style !== "pop" && style !== "real" && f.sceneIndex > 0 && since < 0.5) wipe(ctx, f.w, f.h, easeInOutCubic(clamp01(since / 0.5)));
 }
 
 // ---- Cartoon: one of our own characters presents the script from a speech bubble, in a flat 2D room. ----
@@ -540,5 +540,66 @@ function cartoon(ctx: CanvasRenderingContext2D, f: Frame, local: number) {
   if (k > 0.5) {
     const pad = u * 0.045;
     revealText(ctx, f, { x: b.x + pad, y: b.y + pad * 0.8, w: b.w - pad * 2, h: b.h - pad * 1.6, align: "center" }, { weight: 800, color: C.ink, dim: "rgba(20,20,43,0.13)", active: C.coral, start: u * (portrait ? 0.075 : 0.08) });
+  }
+}
+
+// ---- Real: documentary look. Footage fills the screen untouched, a soft vignette, calm lower-third captions,
+// a slow push-in and a short dip through black between scenes. No graphics. ----
+function real(ctx: CanvasRenderingContext2D, f: Frame, local: number) {
+  const { w, h } = f;
+  const u = Math.min(w, h);
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0, 0, w, h);
+  if (f.clip) cover(ctx, f.clip, w, h, 1.02 + 0.05 * easeInOutCubic(local));
+  else {
+    // No footage: a warm, dark film-like backdrop with drifting light, so the look stays photographic.
+    const g = ctx.createRadialGradient(w * (0.4 + 0.2 * Math.sin(f.t * 0.2)), h * 0.35, 0, w * 0.5, h * 0.4, Math.max(w, h) * 0.8);
+    g.addColorStop(0, "#5a4636");
+    g.addColorStop(0.5, "#2a2019");
+    g.addColorStop(1, "#0d0a08");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
+  }
+  // Vignette and a gentle bottom shade for the captions.
+  const v = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.35, w / 2, h / 2, Math.hypot(w, h) * 0.6);
+  v.addColorStop(0, "rgba(0,0,0,0)");
+  v.addColorStop(1, "rgba(0,0,0,0.45)");
+  ctx.fillStyle = v;
+  ctx.fillRect(0, 0, w, h);
+  const b = ctx.createLinearGradient(0, h * 0.55, 0, h);
+  b.addColorStop(0, "rgba(0,0,0,0)");
+  b.addColorStop(1, "rgba(0,0,0,0.6)");
+  ctx.fillStyle = b;
+  ctx.fillRect(0, h * 0.55, w, h * 0.45);
+
+  // Caption: the current chunk, sentence case, lower third, fading in.
+  const cap = f.captions.find((c) => f.t >= c.start && f.t < c.end) ?? f.captions[f.captions.length - 1];
+  if (cap) {
+    const rtl = RTL.test(cap.text);
+    const size = Math.round(u * (h > w ? 0.06 : 0.058));
+    ctx.save();
+    ctx.font = rtl ? `600 ${Math.round(size * 0.9)}px ${URDU_FONT}` : `600 ${size}px ${FONT}`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    if (rtl) ctx.direction = "rtl";
+    ctx.globalAlpha = easeOutCubic((f.t - cap.start) / 0.25);
+    ctx.shadowColor = "rgba(0,0,0,0.75)";
+    ctx.shadowBlur = size * 0.4;
+    ctx.shadowOffsetY = size * 0.05;
+    const lines = rtl ? [[cap.text]] : wrapWords(cap.words.map((x) => x.w), w * 0.84, (s) => ctx.measureText(s).width);
+    const lh = size * (rtl ? 1.8 : 1.3);
+    const base = h * (h > w ? 0.8 : 0.84) - ((lines.length - 1) * lh) / 2;
+    ctx.fillStyle = "#fff";
+    lines.forEach((l, i) => ctx.fillText(l.join(" "), w / 2, base + i * lh));
+    ctx.restore();
+  }
+
+  // Dip through black at the cut between scenes.
+  const since = f.t - f.sceneStart;
+  const left = f.sceneEnd - f.t;
+  const dip = Math.max(f.sceneIndex > 0 ? 1 - clamp01(since / 0.3) : 0, 1 - clamp01(left / 0.2));
+  if (dip > 0) {
+    ctx.fillStyle = `rgba(0,0,0,${dip * 0.85})`;
+    ctx.fillRect(0, 0, w, h);
   }
 }

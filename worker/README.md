@@ -40,3 +40,10 @@ VITE_TTS_URL=https://kahanio-voice.<your-account>.workers.dev
 VITE_TURNSTILE_SITEKEY=<Turnstile site key>
 ```
 Without them the site hides the online voices: English uses the on-device voice; Urdu and Hindi ask for your own voice.
+
+## Free AI scripts (`/script`)
+Visitors get an AI script without a key of their own. The Worker tries free models in order and keeps the keys server-side:
+1. Groq (free plan, does not train on prompts): key from https://console.groq.com/keys, then `npx.cmd wrangler secret put GROQ_KEY`
+2. Google Gemini (fallback; Google may use free-tier prompts to improve its products): key from https://aistudio.google.com/apikey, then `npx.cmd wrangler secret put GEMINI_KEY`
+
+Either one is enough; with neither, the page says free scripts are not set up and offers "own key" or writing it yourself. Same bot-check session and per-IP limit as the voice. The prompt (`src/llm.ts` `buildMessages`) follows a hook, problem, value, one-ask structure, facts only, with an optional TikTok-safe switch (no numbers, prices or links).

@@ -1,6 +1,7 @@
 import { decodeVoice } from "./audio.ts";
 import { TEMPLATES } from "./templates.ts";
-import { findStockClip, onlineAvailable, StockUnavailable } from "./tts.ts";
+import { findStockClip, onlineAvailable, StockUnavailable, workerScript } from "./tts.ts";
+import { checkScript, RECIPE, recipeExample } from "./scriptcheck.ts";
 import { setupVoice } from "./voice-ui.ts";
 import { type CharacterId, CHARACTERS, DEFAULT_CHARACTER } from "./cartoon.ts";
 import type { PhotoLayer } from "./parallax.ts";
@@ -8,7 +9,7 @@ import { setupPhotos } from "./photos.ts";
 import type { StyleId } from "./styles.ts";
 import { BRAND } from "./brand.ts";
 import { FONT } from "./draw.ts";
-import { PROVIDERS, type ScriptLang, writeScript } from "./llm.ts";
+import { parseExtras, PROVIDERS, type ScriptLang, writeScript } from "./llm.ts";
 import { type Format, browserCanRender, renderVideo } from "./render.ts";
 import { type Scene, parseScript, scenesToText, templateScript } from "./script.ts";
 import { type Clip, findClip } from "./stock.ts";
@@ -94,15 +95,16 @@ function init() {
       const v = srcValue();
       $("aiBox").hidden = v !== "ai";
       $("draft").hidden = v === "own";
+      $("draft").textContent = v === "template" ? "Fill the recipe" : "✦ Write my script";
+      $("draftStatus").textContent = "";
       $("srcHint").textContent =
         v === "own"
-          ? "Your own words work best: platforms favour original voices."
+          ? "Your own words work best: platforms favour original voices. The check below helps you."
           : v === "ai"
-            ? "Uses a free AI tier with your own key. Always read and fix the script before you post."
-            : "A simple five-scene starter. Make it yours before you post.";
+            ? "Free, no key needed. Read it and make it yours before you post."
+            : "Fills a proven hook, problem, tips and ending for your topic. Then make it yours.";
     };
   });
-  $("draft").hidden = true;
 
   const scriptBox = $<HTMLTextAreaElement>("script");
   const topicBox = $<HTMLInputElement>("topic");
@@ -110,6 +112,7 @@ function init() {
     b.onclick = () => {
       topicBox.value = b.dataset.topic ?? "";
       if (!scriptBox.value.trim()) scriptBox.value = scenesToText(templateScript(topicBox.value));
+      scriptBox.dispatchEvent(new Event("input"));
     };
   });
 
@@ -170,6 +173,7 @@ function init() {
       syncPicker();
       setFormat(g.format);
       scriptBox.value = g.starter(topicBox.value.trim() || "your topic").join("\n");
+      scriptBox.dispatchEvent(new Event("input"));
       goMake();
     },
   );
@@ -178,8 +182,15 @@ function init() {
     const t = $<HTMLInputElement>("heroTopic").value.trim();
     if (!t) return;
     topicBox.value = t;
-    if (!scriptBox.value.trim()) scriptBox.value = scenesToText(templateScript(t));
     goMake();
+    // Easiest path: the free AI writes the first draft right away; without it, the simple recipe.
+    if (!scriptBox.value.trim()) {
+      if (onlineAvailable()) $<HTMLButtonElement>("draft").click();
+      else {
+        scriptBox.value = recipeExample(t).join("\n");
+        scriptBox.dispatchEvent(new Event("input"));
+      }
+    }
   };
   document.querySelectorAll<HTMLButtonElement>("[data-hero-topic]").forEach((b) => {
     b.onclick = () => {
@@ -214,29 +225,69 @@ function init() {
 
   const draftBtn = $<HTMLButtonElement>("draft");
   draftBtn.onclick = async () => {
-    const topic = $<HTMLInputElement>("topic").value.trim();
-    if (!topic) return $<HTMLInputElement>("topic").reportValidity();
+    const topic = topicBox.value.trim();
+    if (!topic) return topicBox.reportValidity();
     if (srcValue() === "template") {
-      scriptBox.value = scenesToText(templateScript(topic));
+      scriptBox.value = recipeExample(topic).join("\n");
+      scriptBox.dispatchEvent(new Event("input"));
       return;
     }
+    const lang = $<HTMLSelectElement>("lang").value as ScriptLang;
+    const seconds = Number($<HTMLSelectElement>("seconds").value);
+    const platformSafe = $<HTMLInputElement>("platformSafe").checked;
     const key = $<HTMLInputElement>("aiKey").value.trim();
-    if (!key) return alert("Paste your free API key first, or write the script yourself.");
+    const status = $("draftStatus");
     draftBtn.disabled = true;
     draftBtn.textContent = "Writing…";
+    status.textContent = "";
     try {
-      const p = PROVIDERS.find((x) => x.id === provider.value)!;
-      const raw = await writeScript(p, key, topic, $<HTMLSelectElement>("lang").value as ScriptLang, Number($<HTMLSelectElement>("seconds").value));
+      let raw: string;
+      if (key) raw = await writeScript(PROVIDERS.find((x) => x.id === provider.value)!, key, topic, lang, seconds, undefined, { platformSafe });
+      else if (onlineAvailable()) raw = await workerScript({ topic, lang, seconds, platformSafe }, (m) => (status.textContent = m));
+      else throw new Error("Free AI is not available on this copy of the site. Open \"Use my own AI key instead\", or write the script yourself.");
       const scenes = parseScript(raw);
-      if (!scenes.length) throw new Error("The AI answer had no usable scenes. Press Get script again.");
+      if (!scenes.length) throw new Error("The AI answer had no usable scenes. Press Write my script again.");
       scriptBox.value = scenesToText(scenes);
+      scriptBox.dispatchEvent(new Event("input"));
+      const ex = parseExtras(raw);
+      const cap = [ex.caption, ex.hashtags.map((h) => "#" + h).join(" ")].filter(Boolean).join("\n\n");
+      $<HTMLTextAreaElement>("aiCaption").value = cap;
+      $("captionBox").hidden = !cap;
+      status.textContent = "Done. Read it, change anything that is not true for you, then make the video.";
     } catch (e) {
-      alert((e as Error).message);
+      status.textContent = (e as Error).message;
     } finally {
       draftBtn.disabled = false;
-      draftBtn.textContent = "✦ Get script";
+      draftBtn.textContent = "✦ Write my script";
     }
   };
+
+  $("copyCaption").onclick = () => void navigator.clipboard?.writeText($<HTMLTextAreaElement>("aiCaption").value).catch(() => undefined);
+
+  // The recipe guide and the live script check.
+  $("recipe").innerHTML = RECIPE.map((r) => `<li><strong>${r.step}</strong>: ${r.hint}</li>`).join("");
+  $("useRecipe").onclick = () => {
+    scriptBox.value = recipeExample(topicBox.value).join("\n");
+    scriptBox.dispatchEvent(new Event("input"));
+  };
+  let checkTimer = 0;
+  const runCheck = () => {
+    const scenes = parseScript(scriptBox.value);
+    const box = $("checkBox");
+    box.hidden = !scriptBox.value.trim();
+    if (box.hidden) return;
+    const r = checkScript(scenes, { platformSafe: $<HTMLInputElement>("platformSafe").checked });
+    const v = $("checkVerdict");
+    v.className = "check-verdict v-" + r.verdict;
+    v.textContent = r.verdict === "ready" ? "✓ Script looks ready" : r.verdict === "almost" ? "Almost there: small tips below" : "Fix these first";
+    $("checkList").innerHTML = r.items.map((i) => `<li class="c-${i.level}">${i.text.replace(/</g, "&lt;")}</li>`).join("");
+  };
+  scriptBox.addEventListener("input", () => {
+    clearTimeout(checkTimer);
+    checkTimer = window.setTimeout(runCheck, 250);
+  });
+  $("platformSafe").addEventListener("change", runCheck);
+
 
   // Voice: an uploaded file or a recording made here. It never leaves the browser.
   let voiceBlob: Blob | null = null;

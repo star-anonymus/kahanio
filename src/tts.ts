@@ -204,3 +204,22 @@ export async function findStockClip(keywords: string[], orientation: "portrait" 
   if (!c) return null;
   return { id: c.id, url: `${TTS_URL}/clip?u=${encodeURIComponent(c.file)}&s=${encodeURIComponent(s)}`, credit: { source: "Pexels", author: c.author, url: c.page } };
 }
+
+/** Free AI script through our Worker (the owner's free model keys stay on the server). Same bot-check session as the voice. */
+export async function workerScript(
+  req: { topic: string; lang: "en" | "ur" | "hi"; seconds: number; platformSafe: boolean },
+  onStatus: (s: string) => void,
+): Promise<string> {
+  if (!TTS_URL) throw new Error("Free AI scripts are not available here. Write the script yourself or use your own key.");
+  const session = await onlineSession(onStatus);
+  onStatus("Writing your script…");
+  let r: Response;
+  try {
+    r = await fetch(`${TTS_URL}/script`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...req, session }) });
+  } catch {
+    throw new Error("Could not reach the free AI. Check your connection and press Get script again.");
+  }
+  const j = (await r.json().catch(() => ({}))) as { text?: string; error?: string };
+  if (!r.ok || !j.text) throw new Error(j.error ?? `The free AI did not answer (HTTP ${r.status}). Press Get script again.`);
+  return j.text;
+}

@@ -155,7 +155,8 @@ export function drawScene(ctx: CanvasRenderingContext2D, f: Frame) {
   const fills = segmentFills(f.sceneCount, f.sceneIndex, local);
   const lightBg = style === "clean" && !f.clip;
   const segW = (w - m * 2 - gap * (fills.length - 1)) / fills.length;
-  fills.forEach((fill, i) => {
+  // The Real template stays clean and cinematic: no story bars.
+  if (style !== "real") fills.forEach((fill, i) => {
     const x = m + i * (segW + gap);
     ctx.fillStyle = lightBg ? "rgba(20,20,43,0.14)" : "rgba(255,255,255,0.28)";
     ctx.beginPath();

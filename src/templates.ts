@@ -6,6 +6,7 @@ export type Template = { id: StyleId; name: string; blurb: string; sample: strin
 
 export const TEMPLATES: Template[] = [
   { id: "story", name: "Story", blurb: "Story bars, scene numbers, word-by-word captions.", sample: ["Clients are already asking for your service.", "Find them before your competitors do.", "Reply with a real, helpful message."] },
+  { id: "real", name: "Real", blurb: "Real footage, full screen, calm film-style captions. No graphics.", sample: ["Every shop on this street has a story.", "Most of them are not online yet.", "A simple website changes that."] },
   { id: "pop", name: "Bold Pop", blurb: "Flat colours and huge words that pop in.", sample: ["Stop scrolling.", "Three tips that get you replies.", "Save this for later."] },
   { id: "clean", name: "Clean", blurb: "Calm cream page, words that darken as they are read.", sample: ["Good work speaks quietly.", "Show one clear result.", "Let the client ask for more."] },
   { id: "neon", name: "Neon Night", blurb: "Glowing captions over a moving synth grid.", sample: ["Late night idea.", "Build it before morning.", "Ship it tomorrow."] },
