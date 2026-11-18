@@ -41,10 +41,25 @@ export function browserCanRender(): boolean {
   return typeof VideoEncoder !== "undefined" && typeof AudioEncoder !== "undefined" && typeof OfflineAudioContext !== "undefined";
 }
 
-function loadVideo(url: string, signal?: AbortSignal): Promise<HTMLVideoElement> {
+// Object URLs made for this render, freed when it ends.
+const blobUrls: string[] = [];
+
+/**
+ * Loads a clip for drawing. Cross-origin clips are downloaded whole with fetch (CORS) and played from a local blob
+ * URL: a <video> streaming cross-origin in many Range requests can lose the CORS header on one of them, which taints
+ * the canvas and makes the encoder fail ("VideoFrames can't be created from tainted sources"). A blob never taints.
+ */
+async function loadVideo(url: string, signal?: AbortSignal): Promise<HTMLVideoElement> {
+  let src = url;
+  const cross = !url.startsWith("blob:") && !url.startsWith("data:") && new URL(url, location.href).origin !== location.origin;
+  if (cross) {
+    const res = await fetch(url, { mode: "cors", signal });
+    if (!res.ok) throw new Error(`clip HTTP ${res.status}`);
+    src = URL.createObjectURL(await res.blob());
+    blobUrls.push(src);
+  }
   return new Promise((resolve, reject) => {
     const v = document.createElement("video");
-    v.crossOrigin = "anonymous";
     v.muted = true;
     v.playsInline = true;
     v.preload = "auto";
@@ -58,8 +73,12 @@ function loadVideo(url: string, signal?: AbortSignal): Promise<HTMLVideoElement>
       reject(new Error("load"));
     };
     signal?.addEventListener("abort", () => reject(new Error("aborted")));
-    v.src = url;
+    v.src = src;
   });
+}
+
+function freeClips() {
+  while (blobUrls.length) URL.revokeObjectURL(blobUrls.pop()!);
 }
 
 function seek(v: HTMLVideoElement, time: number): Promise<void> {
@@ -92,7 +111,14 @@ export async function renderVideo(job: RenderJob, onProgress: (fraction: number,
       continue;
     }
     try {
-      videos.push(await loadVideo(c.url, signal));
+      const v = await loadVideo(c.url, signal);
+      // Belt and braces: if drawing this clip would taint the canvas, drop it here instead of failing at the encoder.
+      const probe = document.createElement("canvas");
+      probe.width = probe.height = 2;
+      const pctx = probe.getContext("2d")!;
+      pctx.drawImage(v, 0, 0, 2, 2);
+      pctx.getImageData(0, 0, 1, 1);
+      videos.push(v);
     } catch {
       warnings.push(`Clip for scene ${i + 1} would not load, so that scene uses the animated background.`);
       videos.push(null);
@@ -132,41 +158,45 @@ export async function renderVideo(job: RenderJob, onProgress: (fraction: number,
   asrc.close();
 
   const frames = Math.ceil(total * FPS);
-  for (let n = 0; n < frames; n++) {
-    if (signal?.aborted) {
-      await output.cancel();
-      throw new Error("Stopped.");
+  try {
+    for (let n = 0; n < frames; n++) {
+      if (signal?.aborted) {
+        await output.cancel();
+        throw new Error("Stopped.");
+      }
+      const t = n / FPS;
+      if (t < body) {
+        const i = findIndex(spans, t);
+        const video = videos[i];
+        if (video) await seek(video, (t - spans[i].start) % Math.max(0.5, video.duration - 0.1));
+        const photo = !video && photos.length ? photos[i % photos.length] : null;
+        const local = (t - spans[i].start) / Math.max(0.001, spans[i].end - spans[i].start);
+        const clip = video ?? (photo && parallax ? parallax.render(photo, motionAt(motionForScene(i), local)) : null);
+        const character = rig
+          ? await rig.frame(cartoonPose({ t, sceneIndex: i, sceneCount: spans.length, sceneStart: spans[i].start, sceneEnd: spans[i].end, words: captions[i].flatMap((c) => c.words), voiceLevel: env ? (env[n] ?? 0) : undefined, seed: job.seed % 7 }))
+          : null;
+        drawScene(ctx, {
+          w,
+          h,
+          t,
+          total: body,
+          sceneIndex: i,
+          sceneCount: spans.length,
+          sceneStart: spans[i].start,
+          sceneEnd: spans[i].end,
+          clip,
+          captions: captions[i],
+          aiLabel: job.aiLabel,
+          style: job.style,
+          topic: job.topic,
+          character,
+        });
+      } else drawEndCard(ctx, w, h, t - body, credits, job.aiLabel);
+      await vsrc.add(t, 1 / FPS);
+      if (n % 15 === 0) onProgress(0.08 + 0.9 * (n / frames), `Rendering ${Math.round((n / frames) * 100)}%`);
     }
-    const t = n / FPS;
-    if (t < body) {
-      const i = findIndex(spans, t);
-      const video = videos[i];
-      if (video) await seek(video, (t - spans[i].start) % Math.max(0.5, video.duration - 0.1));
-      const photo = !video && photos.length ? photos[i % photos.length] : null;
-      const local = (t - spans[i].start) / Math.max(0.001, spans[i].end - spans[i].start);
-      const clip = video ?? (photo && parallax ? parallax.render(photo, motionAt(motionForScene(i), local)) : null);
-      const character = rig
-        ? await rig.frame(cartoonPose({ t, sceneIndex: i, sceneCount: spans.length, sceneStart: spans[i].start, sceneEnd: spans[i].end, words: captions[i].flatMap((c) => c.words), voiceLevel: env ? (env[n] ?? 0) : undefined, seed: job.seed % 7 }))
-        : null;
-      drawScene(ctx, {
-        w,
-        h,
-        t,
-        total: body,
-        sceneIndex: i,
-        sceneCount: spans.length,
-        sceneStart: spans[i].start,
-        sceneEnd: spans[i].end,
-        clip,
-        captions: captions[i],
-        aiLabel: job.aiLabel,
-        style: job.style,
-        topic: job.topic,
-        character,
-      });
-    } else drawEndCard(ctx, w, h, t - body, credits, job.aiLabel);
-    await vsrc.add(t, 1 / FPS);
-    if (n % 15 === 0) onProgress(0.08 + 0.9 * (n / frames), `Rendering ${Math.round((n / frames) * 100)}%`);
+  } finally {
+    freeClips();
   }
   vsrc.close();
   await output.finalize();
