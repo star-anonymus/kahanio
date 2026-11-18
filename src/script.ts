@@ -83,8 +83,9 @@ export function parseScript(raw: string): Scene[] {
 /** A no-AI starter script so the tool works with no key at all. The page tells the user to edit it. */
 export function templateScript(topic: string): Scene[] {
   const t = clean(topic) || "your topic";
+  const T = t.charAt(0).toUpperCase() + t.slice(1);
   return [
-    `Most people get ${t} wrong. Here is the short version.`,
+    `${T}: here is what most people miss.`,
     `First: know exactly who it is for, and what problem it solves.`,
     `Second: start small. One clear step today beats a perfect plan next month.`,
     `Third: measure one number every week, and change one thing at a time.`,

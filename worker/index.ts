@@ -72,8 +72,13 @@ export default {
       form.append("secret", env.TURNSTILE_SECRET);
       form.append("response", token);
       form.append("remoteip", ip);
-      const check = (await (await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", { method: "POST", body: form })).json()) as { success?: boolean };
-      if (!check.success) return json({ error: "The bot check failed. Reload and try again." }, 403, cors);
+      const check = (await (await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", { method: "POST", body: form })).json()) as { success?: boolean; "error-codes"?: string[] };
+      if (!check.success) {
+        // Cloudflare's reason codes are safe to show and say what is wrong (e.g. an expired token or a wrong secret).
+        const codes = (check["error-codes"] ?? []).filter((c) => /^[a-z-]+$/.test(c)).join(", ");
+        const expired = /timeout-or-duplicate/.test(codes);
+        return json({ error: expired ? "The bot check expired. Press the button again and tick the box." : `The bot check failed${codes ? ` (${codes})` : ""}. Reload and try again.`, codes }, 403, cors);
+      }
       return json({ session: await signSession(env.SESSION_SECRET, ip) }, 200, cors);
     }
 

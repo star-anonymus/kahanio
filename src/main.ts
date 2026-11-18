@@ -111,8 +111,11 @@ function init() {
   document.querySelectorAll<HTMLButtonElement>("[data-topic]").forEach((b) => {
     b.onclick = () => {
       topicBox.value = b.dataset.topic ?? "";
-      if (!scriptBox.value.trim()) scriptBox.value = scenesToText(templateScript(topicBox.value));
-      scriptBox.dispatchEvent(new Event("input"));
+      if (srcValue() === "ai" && onlineAvailable()) $<HTMLButtonElement>("draft").click();
+      else {
+        scriptBox.value = recipeExample(topicBox.value).join("\n");
+        scriptBox.dispatchEvent(new Event("input"));
+      }
     };
   });
 

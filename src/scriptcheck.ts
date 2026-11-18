@@ -71,8 +71,10 @@ export const RECIPE = [
 
 export function recipeExample(topic: string): string[] {
   const t = topic.trim() || "your topic";
+  const T = t.charAt(0).toUpperCase() + t.slice(1);
   return [
-    `Most people get ${t} wrong.`,
+    // Works with any topic phrase ("cold email tips", "How to find clients"): the topic is a label, not part of a sentence.
+    `${T}? Most people get this wrong.`,
     "Here is what actually works.",
     "First: start with the one thing your audience needs most.",
     "Second: show a real example, not a promise.",
