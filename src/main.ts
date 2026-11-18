@@ -246,7 +246,7 @@ function init() {
     try {
       let raw: string;
       if (key) raw = await writeScript(PROVIDERS.find((x) => x.id === provider.value)!, key, topic, lang, seconds, undefined, { platformSafe });
-      else if (onlineAvailable()) raw = await workerScript({ topic, lang, seconds, platformSafe }, (m) => (status.textContent = m));
+      else if (onlineAvailable()) raw = await workerScript({ topic, lang, seconds, platformSafe }, (m) => (status.textContent = m), status);
       else throw new Error("Free AI is not available on this copy of the site. Open \"Use my own AI key instead\", or write the script yourself.");
       const scenes = parseScript(raw);
       if (!scenes.length) throw new Error("The AI answer had no usable scenes. Press Write my script again.");

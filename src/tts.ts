@@ -58,7 +58,15 @@ function loadKokoro(onStatus: (s: string) => void): Promise<Kokoro> {
 // ---- FameSpeak (through the Worker) ----
 let session: { token: string; exp: number } | null = null;
 
-function turnstileToken(onStatus: (s: string) => void): Promise<string> {
+// A token that arrived after we stopped waiting (the visitor ticked late). Cloudflare tokens live 300 s; reuse it on Retry.
+let lateToken: { t: string; at: number } | null = null;
+
+function turnstileToken(onStatus: (s: string) => void, anchor?: HTMLElement | null): Promise<string> {
+  if (lateToken && Date.now() - lateToken.at < 240000) {
+    const t = lateToken.t;
+    lateToken = null;
+    return Promise.resolve(t);
+  }
   return new Promise((resolve, reject) => {
     const run = () => {
       const w = window as unknown as { turnstile?: { render(el: HTMLElement, o: Record<string, unknown>): string } };
@@ -66,24 +74,40 @@ function turnstileToken(onStatus: (s: string) => void): Promise<string> {
       if (!box) {
         box = document.createElement("div");
         box.id = "ts-box";
-        document.getElementById("voiceBox")?.append(box);
       }
+      // Show the check next to the button the visitor pressed (script step or voice step).
+      const host = anchor ?? document.getElementById("voiceBox");
+      if (host && box.parentElement !== host.parentElement) host.after(box);
+      else if (!box.parentElement) document.getElementById("voiceBox")?.append(box);
       box.innerHTML = "";
-      // Never hang: stop after one failure or 25 seconds, with a reason the visitor can read.
-      let timer = setTimeout(() => reject(new Error("The bot check took too long. Press Retry.")), 25000);
+      let done = false;
+      // Never hang, but give a person time to tick: two minutes, with the reason in plain words.
+      const timer = setTimeout(() => {
+        done = true;
+        reject(new Error("The bot check was not completed. Tick the box, then press Retry."));
+      }, 120000);
+      // If no token after a few seconds, Cloudflare wants a click: say so (some widgets never fire the callback below).
+      const hint = setTimeout(() => {
+        onStatus("Quick check: tick the box to continue.");
+        box!.scrollIntoView({ block: "center", behavior: "smooth" });
+      }, 3000);
       w.turnstile!.render(box, {
         sitekey: SITEKEY,
         retry: "never",
-        // When Cloudflare wants a human click, say so and give the visitor time to do it.
         "before-interactive-callback": () => {
-          clearTimeout(timer);
-          timer = setTimeout(() => reject(new Error("The bot check was not completed. Press Retry.")), 120000);
-          onStatus("Quick check: tick the box below to continue.");
+          onStatus("Quick check: tick the box to continue.");
           box!.scrollIntoView({ block: "center", behavior: "smooth" });
         },
-        callback: (t: string) => (clearTimeout(timer), resolve(t)),
+        callback: (t: string) => {
+          clearTimeout(timer);
+          clearTimeout(hint);
+          if (done) lateToken = { t, at: Date.now() };
+          else resolve(t);
+        },
         "error-callback": (code: string) => {
           clearTimeout(timer);
+          clearTimeout(hint);
+          done = true;
           reject(new Error(`The bot check did not load (code ${code}). Press Retry.`));
         },
       });
@@ -98,14 +122,27 @@ function turnstileToken(onStatus: (s: string) => void): Promise<string> {
   });
 }
 
-async function onlineSession(onStatus: (s: string) => void): Promise<string> {
+// One bot check at a time: voice, footage and script share the same session, so parallel calls wait for one check
+// instead of each drawing a new box over the other (which left the first one waiting forever).
+let pendingSession: Promise<string> | null = null;
+
+async function onlineSession(onStatus: (s: string) => void, anchor?: HTMLElement | null): Promise<string> {
   if (session && session.exp > Date.now() + 30000) return session.token;
-  const token = await turnstileToken(onStatus);
-  const r = await fetch(`${TTS_URL}/session`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ turnstile: token }) });
-  const j = (await r.json().catch(() => ({}))) as { session?: string; error?: string };
-  if (!r.ok || !j.session) throw new Error(j.error ?? "Could not start the voice session. Press Retry.");
-  session = { token: j.session, exp: Date.now() + 14 * 60 * 1000 };
-  return j.session;
+  if (pendingSession) return pendingSession;
+  pendingSession = (async () => {
+    const token = await turnstileToken(onStatus, anchor);
+    const r = await fetch(`${TTS_URL}/session`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ turnstile: token }) });
+    const j = (await r.json().catch(() => ({}))) as { session?: string; error?: string };
+    if (!r.ok || !j.session) throw new Error(j.error ?? "Could not start the session. Press Retry.");
+    session = { token: j.session, exp: Date.now() + 14 * 60 * 1000 };
+    document.getElementById("ts-box")?.replaceChildren();
+    return j.session;
+  })();
+  try {
+    return await pendingSession;
+  } finally {
+    pendingSession = null;
+  }
 }
 
 export class QuotaError extends Error {}
@@ -209,9 +246,10 @@ export async function findStockClip(keywords: string[], orientation: "portrait" 
 export async function workerScript(
   req: { topic: string; lang: "en" | "ur" | "hi"; seconds: number; platformSafe: boolean },
   onStatus: (s: string) => void,
+  anchor?: HTMLElement | null,
 ): Promise<string> {
   if (!TTS_URL) throw new Error("Free AI scripts are not available here. Write the script yourself or use your own key.");
-  const session = await onlineSession(onStatus);
+  const session = await onlineSession(onStatus, anchor);
   onStatus("Writing your script…");
   let r: Response;
   try {
