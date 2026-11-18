@@ -30,6 +30,17 @@ async function fame(env: Env, path: string, init: RequestInit = {}) {
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {
     const cors = corsHeaders(req.headers.get("Origin"), env.ALLOWED_ORIGINS);
+    try {
+      return await handle(req, env, cors);
+    } catch (e) {
+      console.error("worker error", (e as Error)?.message);
+      return json({ error: "The server had a hiccup. Retrying…", busy: true }, 503, cors);
+    }
+  },
+};
+
+async function handle(req: Request, env: Env, cors: Record<string, string>): Promise<Response> {
+  {
     if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
     const ip = req.headers.get("CF-Connecting-IP") ?? "0.0.0.0";
     const url = new URL(req.url);
@@ -138,8 +149,10 @@ export default {
       const voice = ONLINE_VOICES.find((v) => v.id === r.voice)!;
 
       // Start the generation; wait our turn while another one is running (one at a time on this plan).
+      // Answer well before the edge gives up (about 100 s): after 60 s say "busy" and let the page retry.
+      const deadline = Date.now() + 60000;
       let id = "";
-      for (let attempt = 0; attempt < 8 && !id; attempt++) {
+      for (let attempt = 0; attempt < 8 && !id && Date.now() < deadline; attempt++) {
         const start = await fame(env, "/tts/generations", { method: "POST", body: JSON.stringify({ text: r.text, voice: voice.fsId }) });
         if (start.status === 202 || start.ok) {
           id = ((await start.json()) as { id?: string }).id ?? "";
@@ -151,9 +164,9 @@ export default {
       }
       if (!id) return json({ error: "The voice service is busy. Retrying…", busy: true }, 429, cors);
 
-      for (let poll = 0; poll < 30; poll++) {
+      while (Date.now() < deadline) {
         await sleep(1500);
-        const st = (await (await fame(env, `/tts/generations/${id}`)).json()) as { status?: string; failureMessage?: string };
+        const st = (await (await fame(env, `/tts/generations/${id}`)).json().catch(() => ({}))) as { status?: string; failureMessage?: string };
         if (st.status === "completed") {
           const audio = await fame(env, `/tts/generations/${id}/audio`);
           if (!audio.ok) return json({ error: `Could not fetch the voice audio (HTTP ${audio.status}).` }, 502, cors);
@@ -161,8 +174,8 @@ export default {
         }
         if (st.status === "failed" || st.status === "cancelled") return json({ error: `The voice could not read this scene. ${st.failureMessage ?? ""}`.trim() }, 422, cors);
       }
-      return json({ error: "The voice took too long. Press Retry." }, 504, cors);
+      return json({ error: "The voice service is slow right now. Retrying…", busy: true }, 429, cors);
     }
     return json({ error: "Not found." }, 404, cors);
-  },
-};
+  }
+}

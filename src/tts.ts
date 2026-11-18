@@ -158,8 +158,20 @@ export class QuotaError extends Error {}
 
 /** One scene through the Worker. Waits and retries while the voice service is busy (it makes one voice at a time). */
 async function onlineScene(text: string, voice: string, onStatus: (s: string) => void): Promise<ArrayBuffer> {
+  let netFails = 0;
   for (let attempt = 0; attempt < 6; attempt++) {
-    const r = await reach("/tts", { text, voice, session: await onlineSession(onStatus) }, "voice");
+    let r: Response;
+    try {
+      r = await reach("/tts", { text, voice, session: await onlineSession(onStatus) }, "voice");
+    } catch (e) {
+      // A dropped connection (e.g. the edge timing out while the voice service was busy) is retried like "busy",
+      // three times with growing gaps, before the visitor sees an error.
+      if (++netFails > 3) throw e;
+      onStatus("The voice server is slow right now. Trying again…");
+      await new Promise((res) => setTimeout(res, 2500 * netFails));
+      attempt--;
+      continue;
+    }
     if (r.ok) return r.arrayBuffer();
     const j = (await r.json().catch(() => ({}))) as { error?: string; busy?: boolean; quota?: boolean };
     if (r.status === 401 && attempt === 0) {
