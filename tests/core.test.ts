@@ -133,14 +133,15 @@ test("buildMessages asks for facts-only JSON in the chosen language", () => {
   assert.equal(PROVIDERS.length, 3);
 });
 
-test("every sample script parses into 5-6 scenes with keywords", () => {
+test("every sample script parses into 5-6 scenes (hero clips: 3) with keywords", () => {
   const dir = new URL("../samples/", import.meta.url);
   const files = readdirSync(dir).filter((f) => f.endsWith(".json"));
   assert.ok(files.length >= 4);
   for (const f of files) {
     const s = JSON.parse(readFileSync(new URL(f, dir), "utf8"));
     const scenes = parseScript(s.script);
-    assert.ok(scenes.length >= 5 && scenes.length <= 6, f);
+    const min = f.startsWith("hero-") ? 3 : 5;
+    assert.ok(scenes.length >= min && scenes.length <= 6, f);
     assert.ok(["story", "pop", "clean", "neon", "chat", "news", "cartoon", "real"].includes(s.style), f);
     assert.ok(scenes.every((x) => x.keywords.length > 0), f);
   }
@@ -394,4 +395,11 @@ test("ClientoraHQ ad: trial price switches after 5 Jan 2027, links carry the pla
   assert.equal(trialPrice(Date.UTC(2027, 0, 6, 1)), "$25");
   assert.match(chqLink("after_video"), /^https:\/\/clientorahq\.com\/\?utm_source=kahanio&utm_medium=referral&utm_campaign=after_video$/);
   assert.match(promoCopy(Date.UTC(2027, 1, 1)).sponsor.cta, /\$25/);
+});
+
+test("hero chip names the kind of video on screen", async () => {
+  const { heroKind } = await import("../src/promo.ts");
+  assert.equal(heroKind(1), "Real footage");
+  assert.equal(heroKind(7), "Cartoon");
+  assert.equal(heroKind(13), "Animated templates");
 });

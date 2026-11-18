@@ -27,3 +27,8 @@ export function promoCopy(now: number = Date.now()) {
     },
   };
 }
+
+/** What the hero reel shows at time t (seconds): real footage 0-5 s, cartoon 5-9.8 s, animated templates after. */
+export function heroKind(t: number): string {
+  return t < 5.05 ? "Real footage" : t < 9.75 ? "Cartoon" : "Animated templates";
+}

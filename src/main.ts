@@ -2,7 +2,7 @@ import { decodeVoice } from "./audio.ts";
 import { type Goal, TEMPLATES } from "./templates.ts";
 import { findStockClip, onlineAvailable, StockUnavailable, workerScript } from "./tts.ts";
 import { checkScript, RECIPE, recipeExample } from "./scriptcheck.ts";
-import { chqLink, promoCopy } from "./promo.ts";
+import { chqLink, heroKind, promoCopy } from "./promo.ts";
 import { setupVoice } from "./voice-ui.ts";
 import { type CharacterId, CHARACTERS, DEFAULT_CHARACTER } from "./cartoon.ts";
 import type { PhotoLayer } from "./parallax.ts";
@@ -304,6 +304,13 @@ function init() {
   };
 
   $("copyCaption").onclick = () => void navigator.clipboard?.writeText($<HTMLTextAreaElement>("aiCaption").value).catch(() => undefined);
+
+  // Hero reel: real footage, then cartoon, then animated templates. The chip names what is on screen.
+  {
+    const v = document.querySelector<HTMLVideoElement>(".hero-bg video");
+    const kind = document.getElementById("nowKind");
+    if (v && kind) v.addEventListener("timeupdate", () => (kind.textContent = heroKind(v.currentTime)));
+  }
 
   // ClientoraHQ ads: copy and the trial price come from promo.ts (the price switches by itself on 5 Jan 2027).
   {
