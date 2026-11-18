@@ -386,3 +386,12 @@ test("worker validateScript accepts a clean request and refuses bad ones", async
   assert.equal(validateScript({ topic: "x".repeat(500), lang: "en", seconds: 20, session: "s" }).hasOwnProperty("topic") && (validateScript({ topic: "x".repeat(500), lang: "en", seconds: 20, session: "s" }) as { topic: string }).topic.length, 160);
   assert.deepEqual(SCRIPT_MODELS.map((m) => m.keyName), ["GROQ_KEY", "GEMINI_KEY"]);
 });
+
+test("ClientoraHQ ad: trial price switches after 5 Jan 2027, links carry the placement", async () => {
+  const { trialPrice, chqLink, promoCopy } = await import("../src/promo.ts");
+  assert.equal(trialPrice(Date.UTC(2026, 10, 18)), "$7.50");
+  assert.equal(trialPrice(Date.UTC(2027, 0, 5, 12)), "$7.50");
+  assert.equal(trialPrice(Date.UTC(2027, 0, 6, 1)), "$25");
+  assert.match(chqLink("after_video"), /^https:\/\/clientorahq\.com\/\?utm_source=kahanio&utm_medium=referral&utm_campaign=after_video$/);
+  assert.match(promoCopy(Date.UTC(2027, 1, 1)).sponsor.cta, /\$25/);
+});

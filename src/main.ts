@@ -2,6 +2,7 @@ import { decodeVoice } from "./audio.ts";
 import { TEMPLATES } from "./templates.ts";
 import { findStockClip, onlineAvailable, StockUnavailable, workerScript } from "./tts.ts";
 import { checkScript, RECIPE, recipeExample } from "./scriptcheck.ts";
+import { chqLink, promoCopy } from "./promo.ts";
 import { setupVoice } from "./voice-ui.ts";
 import { type CharacterId, CHARACTERS, DEFAULT_CHARACTER } from "./cartoon.ts";
 import type { PhotoLayer } from "./parallax.ts";
@@ -266,6 +267,17 @@ function init() {
   };
 
   $("copyCaption").onclick = () => void navigator.clipboard?.writeText($<HTMLTextAreaElement>("aiCaption").value).catch(() => undefined);
+
+  // ClientoraHQ ads: copy and the trial price come from promo.ts (the price switches by itself on 5 Jan 2027).
+  {
+    const copy = promoCopy() as unknown as Record<string, Record<string, string>>;
+    document.querySelectorAll<HTMLElement>("[data-promo]").forEach((el) => {
+      const [k, f] = (el.dataset.promo ?? "").split(".");
+      el.textContent = copy[k]?.[f] ?? "";
+    });
+    $<HTMLAnchorElement>("chqSponsor").href = chqLink("sponsor_card");
+    $<HTMLAnchorElement>("chqAfter").href = chqLink("after_video");
+  }
 
   // The recipe guide and the live script check.
   $("recipe").innerHTML = RECIPE.map((r) => `<li><strong>${r.step}</strong>: ${r.hint}</li>`).join("");

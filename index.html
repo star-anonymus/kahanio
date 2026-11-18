@@ -43,7 +43,7 @@
   </head>
   <body>
     <div class="hero-bg" aria-hidden="true">
-      <video autoplay muted loop playsinline preload="auto" poster="/hero-poster.jpg"><source src="/hero.mp4" type="video/mp4" /></video>
+      <video autoplay muted loop playsinline preload="auto" poster="/hero-real-poster.jpg"><source src="/hero-real.mp4" type="video/mp4" /></video>
     </div>
     <div class="glow" aria-hidden="true"></div>
     <header class="top wrap">
@@ -223,7 +223,20 @@
             </div>
             <label for="credits" class="hint">For your video description:</label>
             <textarea id="credits" rows="3" readonly></textarea>
+            <a id="chqAfter" class="chq-ad chq-after" target="_blank" rel="noopener sponsored">
+              <span class="chq-label">Sponsored · from the makers of Kahanio</span>
+              <strong data-promo="after.title"></strong>
+              <span data-promo="after.text"></span>
+              <span class="chq-cta" data-promo="after.cta"></span>
+            </a>
           </section>
+
+          <a id="chqSponsor" class="chq-ad" target="_blank" rel="noopener sponsored">
+            <span class="chq-label">Sponsored · from the makers of Kahanio</span>
+            <span class="chq-head"><img src="/chq-mark.svg" alt="" width="28" height="28" /><strong data-promo="sponsor.title"></strong></span>
+            <span data-promo="sponsor.text"></span>
+            <span class="chq-cta" data-promo="sponsor.cta"></span>
+          </a>
         </aside>
       </div>
       </section>
@@ -260,6 +273,7 @@
     <footer class="foot wrap">
       <a class="brand footbrand" href="/"><img src="/logo-mark.svg" alt="" width="30" height="30" /><span>kahanio</span></a>
       <p>A free tool from the makers of <a href="https://clientorahq.com" target="_blank" rel="noopener">ClientoraHQ</a>, which finds clients for freelancers and agencies. <a href="https://tools.clientorahq.com" target="_blank" rel="noopener">More free tools</a></p>
+      <p class="hint">Background video: <a href="https://www.pexels.com/video/a-food-vlogger-recording-a-video-while-preparing-a-recipe-12691851/" target="_blank" rel="noopener">a food vlogger on Pexels</a>.</p>
       <p class="hint">Free and open source under the <a href="/LICENSE.txt">GNU GPL-3.0</a>. <a href="https://github.com/star-anonymus/kahanio" target="_blank" rel="noopener">Source code</a>. Free AI voice by Kokoro; online voices by FameSpeak.</p>
     </footer>
     <script type="module" src="/src/main.ts"></script>

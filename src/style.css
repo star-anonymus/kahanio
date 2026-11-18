@@ -234,7 +234,7 @@ progress { width: 100%; height: 10px; border-radius: 99px; overflow: hidden; acc
 .hero-bg video { width: 100%; height: 100%; object-fit: cover; opacity: 0.55; filter: saturate(1.1); }
 .hero-bg::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(12, 12, 28, 0.55) 0%, rgba(12, 12, 28, 0.78) 55%, var(--bg) 100%); }
 .hero h1, .hero .lead { text-shadow: 0 2px 24px rgba(0, 0, 0, 0.55); }
-@media (prefers-reduced-motion: reduce) { .hero-bg video { display: none; } .hero-bg { background: url("/hero-poster.jpg") center / cover; opacity: 0.45; } }
+@media (prefers-reduced-motion: reduce) { .hero-bg video { display: none; } .hero-bg { background: url("/hero-real-poster.jpg") center / cover; opacity: 0.45; } }
 @media (max-width: 760px) { .hero-bg { height: 700px; } }
 
 /* ---- Home: about, how it works, FAQ ---- */
@@ -267,3 +267,15 @@ progress { width: 100%; height: 10px; border-radius: 99px; overflow: hidden; acc
 .guide ol { margin: 10px 0; padding-left: 20px; font-size: 14.5px; }
 .guide li { margin: 4px 0; }
 #draft.primary { margin-top: 4px; }
+
+/* ClientoraHQ ads ("from the makers of Kahanio"): cyan so they read as a different brand, clearly labelled. */
+.chq-ad { display: flex; flex-direction: column; gap: 8px; margin: 16px 0; padding: 16px 18px; border-radius: 18px; text-decoration: none; color: var(--text);
+  background: linear-gradient(150deg, rgba(41, 230, 255, 0.14), rgba(12, 12, 28, 0.9) 60%); border: 1.5px solid rgba(41, 230, 255, 0.45);
+  box-shadow: 0 0 30px rgba(41, 230, 255, 0.10); font-size: 14.5px; line-height: 1.45; transition: border-color 0.15s, transform 0.15s; }
+.chq-ad:hover { border-color: #29e6ff; transform: translateY(-1px); }
+.chq-label { font-size: 11.5px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: #7df3ff; }
+.chq-head { display: flex; align-items: center; gap: 10px; }
+.chq-ad strong { font-size: 16.5px; line-height: 1.3; }
+.chq-ad > span:not(.chq-label):not(.chq-cta):not(.chq-head) { color: var(--muted); }
+.chq-cta { align-self: flex-start; margin-top: 4px; padding: 8px 14px; border-radius: 999px; background: #29e6ff; color: #02121c; font-weight: 800; font-size: 14px; }
+.chq-after { margin-top: 14px; }
