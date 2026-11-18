@@ -34,7 +34,8 @@ export function buildGallery(onUse: (id: StyleId) => void, onGoal: (g: Goal) => 
       <button type="button" class="goal goal-${g.style}" data-goal="${g.id}">
         <span class="goal-title">${esc(g.title)}</span>
         <span class="goal-text" ${/[؀-ۿ]/.test(g.text) ? 'dir="rtl" lang="ur"' : ""}>${esc(g.text)}</span>
-        <span class="goal-go">Start →</span>
+        <span class="goal-hint">Picks a template and writes a starter script</span>
+        <span class="goal-go">Use this idea →</span>
       </button>`,
     ).join("");
     goals.querySelectorAll<HTMLButtonElement>(".goal").forEach((b) => (b.onclick = () => onGoal(GOALS.find((g) => g.id === b.dataset.goal)!)));

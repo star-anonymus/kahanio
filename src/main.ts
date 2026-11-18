@@ -1,5 +1,5 @@
 import { decodeVoice } from "./audio.ts";
-import { TEMPLATES } from "./templates.ts";
+import { type Goal, TEMPLATES } from "./templates.ts";
 import { findStockClip, onlineAvailable, StockUnavailable, workerScript } from "./tts.ts";
 import { checkScript, RECIPE, recipeExample } from "./scriptcheck.ts";
 import { chqLink, promoCopy } from "./promo.ts";
@@ -166,6 +166,34 @@ function init() {
     }
   }
   const goMake = () => document.getElementById("make")?.scrollIntoView({ behavior: "smooth", block: "start" });
+
+  // "Start from an idea": say what happened, and fill the starter only once there is a real topic.
+  let pendingGoal: Goal | null = null;
+  const showIdea = (text: string) => {
+    $("ideaText").textContent = text;
+    $("ideaBanner").hidden = false;
+  };
+  $("ideaClose").onclick = () => ($("ideaBanner").hidden = true);
+  const fillIdea = (g: Goal) => {
+    scriptBox.value = g.starter(topicBox.value.trim()).join("\n");
+    scriptBox.dispatchEvent(new Event("input"));
+  };
+  const usePending = () => {
+    if (!pendingGoal || !topicBox.value.trim()) return;
+    const g = pendingGoal;
+    pendingGoal = null;
+    topicBox.classList.remove("need");
+    fillIdea(g);
+    showIdea(`✓ Idea loaded: ${g.title}. Edit the script below, then press Make my video.`);
+  };
+  topicBox.addEventListener("change", usePending);
+  topicBox.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && pendingGoal) {
+      e.preventDefault();
+      usePending();
+    }
+  });
+
   buildGallery(
     (id) => {
       style = id;
@@ -176,9 +204,18 @@ function init() {
       style = g.style;
       syncPicker();
       setFormat(g.format);
-      scriptBox.value = g.starter(topicBox.value.trim() || "your topic").join("\n");
-      scriptBox.dispatchEvent(new Event("input"));
+      const tName = TEMPLATES.find((t) => t.id === g.style)?.name ?? g.style;
       goMake();
+      if (topicBox.value.trim()) {
+        fillIdea(g);
+        showIdea(`✓ Idea loaded: ${g.title} · ${tName} template. Edit the script below, then press Make my video.`);
+      } else {
+        // No topic yet: ask for it first, then write the starter for that topic (no "your topic" placeholder).
+        pendingGoal = g;
+        showIdea(`✓ ${g.title} · ${tName} template chosen. Now type what your video is about, then press Enter.`);
+        topicBox.classList.add("need");
+        setTimeout(() => topicBox.focus({ preventScroll: true }), 400);
+      }
     },
   );
   $("heroForm").onsubmit = (e) => {

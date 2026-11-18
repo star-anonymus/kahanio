@@ -279,3 +279,9 @@ progress { width: 100%; height: 10px; border-radius: 99px; overflow: hidden; acc
 .chq-ad > span:not(.chq-label):not(.chq-cta):not(.chq-head) { color: var(--muted); }
 .chq-cta { align-self: flex-start; margin-top: 4px; padding: 8px 14px; border-radius: 999px; background: #29e6ff; color: #02121c; font-weight: 800; font-size: 14px; }
 .chq-after { margin-top: 14px; }
+
+/* "Idea loaded" banner and the topic box that needs filling */
+.idea-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 16px 0 0; padding: 12px 14px; border-radius: 14px; background: rgba(61, 220, 151, 0.12); border: 1.5px solid rgba(61, 220, 151, 0.5); font-weight: 600; font-size: 14.5px; }
+.idea-banner .ghost { padding: 4px 10px; }
+#topic.need { border-color: var(--amber) !important; box-shadow: 0 0 0 4px rgba(255, 183, 3, 0.18) !important; }
+.goal-hint { font-size: 13px; opacity: 0.8; }

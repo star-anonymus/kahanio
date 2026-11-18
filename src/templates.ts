@@ -15,6 +15,9 @@ export const TEMPLATES: Template[] = [
   { id: "news", name: "Headline", blurb: "Headline card, label and a ticker with your topic.", sample: ["Most small shops still have no website.", "Customers search online before they visit.", "A simple site can change that."] },
 ];
 
+/** The topic is used as a label, so any phrase reads well ("cold email tips", "How to find clients"). */
+const cap = (t: string) => (t.trim() ? t.trim().charAt(0).toUpperCase() + t.trim().slice(1) : "Your topic");
+
 export type Goal = { id: string; title: string; text: string; style: StyleId; format: "9:16" | "16:9"; starter: (topic: string) => string[] };
 
 export const GOALS: Goal[] = [
@@ -24,7 +27,7 @@ export const GOALS: Goal[] = [
     text: "Teach one useful thing in 30 seconds.",
     style: "story",
     format: "9:16",
-    starter: (t) => [`Three quick tips on ${t}.`, "Tip one: start with the problem, not the product.", "Tip two: keep one clear next step.", "Tip three: check one number every week.", "Follow for more short tips."],
+    starter: (t) => [`${cap(t)}: three quick tips.`, "Tip one: start with the problem, not the product.", "Tip two: keep one clear next step.", "Tip three: check one number every week.", "Follow for more short tips."],
   },
   {
     id: "promo",
@@ -32,7 +35,7 @@ export const GOALS: Goal[] = [
     text: "Show what you do and who it is for.",
     style: "pop",
     format: "9:16",
-    starter: (t) => [`Need help with ${t}?`, "Here is what you get.", "Clear price. Fast delivery. Real support.", "Message me today."],
+    starter: (t) => [`${cap(t)}? Here is how I can help.`, "Here is what you get.", "Clear price. Fast delivery. Real support.", "Message me today."],
   },
   {
     id: "urdu",
@@ -48,7 +51,7 @@ export const GOALS: Goal[] = [
     text: "A client asks, you answer: as a chat.",
     style: "chat",
     format: "9:16",
-    starter: (t) => [`Quick question about ${t}...`, "Sure, ask away!", "Where do I even start?", "Start small: one clear step today.", "That helps, thanks!"],
+    starter: (t) => [`Quick question: ${cap(t)}?`, "Sure, ask away!", "Where do I even start?", "Start small: one clear step today.", "That helps, thanks!"],
   },
   {
     id: "facts",
@@ -56,7 +59,7 @@ export const GOALS: Goal[] = [
     text: "Facts and updates as headlines.",
     style: "news",
     format: "16:9",
-    starter: (t) => [`What you should know about ${t}.`, "Point one: the basics, in one line.", "Point two: the common mistake.", "Point three: what to do next."],
+    starter: (t) => [`${cap(t)}: what you should know.`, "Point one: the basics, in one line.", "Point two: the common mistake.", "Point three: what to do next."],
   },
   {
     id: "cartoon",
@@ -64,7 +67,7 @@ export const GOALS: Goal[] = [
     text: "A 2D cartoon character explains it for you.",
     style: "cartoon",
     format: "9:16",
-    starter: (t) => [`Assalam o Alaikum! Let us talk about ${t}.`, "Here is the simple version.", "Start with one small step today.", "Then do it again tomorrow.", "Follow for more!"],
+    starter: (t) => [`Assalam o Alaikum! Today: ${cap(t)}.`, "Here is the simple version.", "Start with one small step today.", "Then do it again tomorrow.", "Follow for more!"],
   },
   {
     id: "quote",
@@ -72,7 +75,7 @@ export const GOALS: Goal[] = [
     text: "One idea, big and glowing.",
     style: "neon",
     format: "9:16",
-    starter: (t) => [`A thought about ${t}.`, "Small steps, every day.", "Nobody sees the practice.", "Everybody sees the result."],
+    starter: (t) => [`${cap(t)}: one thought.`, "Small steps, every day.", "Nobody sees the practice.", "Everybody sees the result."],
   },
 ];
 
