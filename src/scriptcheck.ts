@@ -56,6 +56,8 @@ export function checkScript(scenes: Scene[], opts: { platformSafe?: boolean } = 
     if (/\d/.test(all)) items.push({ level: "tip", text: "There are numbers in the script. For TikTok, write small numbers as words." });
   }
 
+  items.push(...dateProblems(all));
+
   const fixes = items.filter((x) => x.level === "fix").length;
   const tips = items.filter((x) => x.level === "tip").length;
   return { verdict: fixes ? "fix" : tips ? "almost" : "ready", seconds, items };
@@ -81,4 +83,49 @@ export function recipeExample(topic: string): string[] {
     "Third: keep doing it every week.",
     "Save this, and follow for more.",
   ];
+}
+
+// ---- Date check: a Jumma video once said "the twenty third of November", which was a Monday. ----
+const MONTHS = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
+const DAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+const ORD: Record<string, number> = { first: 1, second: 2, third: 3, fourth: 4, fifth: 5, sixth: 6, seventh: 7, eighth: 8, ninth: 9, tenth: 10, eleventh: 11, twelfth: 12, thirteenth: 13, fourteenth: 14, fifteenth: 15, sixteenth: 16, seventeenth: 17, eighteenth: 18, nineteenth: 19, twentieth: 20, thirtieth: 30 };
+
+function ordinalWords(s: string): number | null {
+  const t = s.toLowerCase().replace(/-/g, " ").trim();
+  if (ORD[t]) return ORD[t];
+  const m = t.match(/^(twenty|thirty) (\w+)$/);
+  if (m && ORD[m[2]] && ORD[m[2]] < 10) return (m[1] === "twenty" ? 20 : 30) + ORD[m[2]];
+  return null;
+}
+
+/** Dates written in English in the text: "23 November", "November 23rd", "the twenty third of November". */
+export function findDates(text: string): { day: number; month: number }[] {
+  const out: { day: number; month: number }[] = [];
+  const mon = MONTHS.join("|");
+  const ord = "(?:twenty|thirty)?[- ]?(?:first|second|third|fourth|fifth|sixth|seventh|eighth|ninth)|tenth|eleventh|twelfth|thirteenth|fourteenth|fifteenth|sixteenth|seventeenth|eighteenth|nineteenth|twentieth|thirtieth";
+  const re = new RegExp(`\\b(\\d{1,2})(?:st|nd|rd|th)?(?: of)? (${mon})\\b|\\b(${mon}) (\\d{1,2})(?:st|nd|rd|th)?\\b|\\b(${ord})(?: of)? (${mon})\\b`, "gi");
+  for (const m of text.matchAll(re)) {
+    const day = m[1] ? +m[1] : m[4] ? +m[4] : ordinalWords(m[5] ?? "");
+    const month = MONTHS.indexOf((m[2] ?? m[3] ?? m[6] ?? "").toLowerCase());
+    if (day && day >= 1 && day <= 31 && month >= 0) out.push({ day, month });
+  }
+  return out;
+}
+
+/** Problems with dates: a date on a different weekday than the script says (e.g. Jumma on a Monday). */
+export function dateProblems(text: string, now: Date = new Date()): CheckItem[] {
+  const dates = findDates(text);
+  if (!dates.length) return [];
+  const lower = text.toLowerCase();
+  const said = /\b(jumm?ah?|juma|jumuah)\b|جمعہ/.test(lower) ? 5 : DAYS.findIndex((d) => new RegExp(`\\b${d}\\b`).test(lower));
+  const items: CheckItem[] = [];
+  for (const { day, month } of dates) {
+    const year = now.getFullYear();
+    const d = new Date(Date.UTC(year, month, day));
+    const wd = d.getUTCDay();
+    const label = `${day} ${MONTHS[month][0].toUpperCase()}${MONTHS[month].slice(1)} ${year}`;
+    if (said >= 0 && wd !== said) items.push({ level: "fix", text: `${label} is a ${DAYS[wd][0].toUpperCase()}${DAYS[wd].slice(1)}, not a ${DAYS[said][0].toUpperCase()}${DAYS[said].slice(1)}. Fix the date or remove it.` });
+    else items.push({ level: "tip", text: `Check the date is right: ${label} is a ${DAYS[wd][0].toUpperCase()}${DAYS[wd].slice(1)}.` });
+  }
+  return items;
 }

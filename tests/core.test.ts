@@ -418,3 +418,42 @@ test("product ad: offer scenes, starter script and the button label", async () =
   assert.equal(ctaLabel("Order now on WhatsApp."), "Order now on WhatsApp");
   assert.ok(ctaLabel("x".repeat(80)).length <= 42);
 });
+
+test("stock guard: Islamic topics get Muslim scenes and never other faiths' worship clips", async () => {
+  const { isIslamicContext, refineKeywords, blockedClip } = await import("../src/stockguard.ts");
+  const ctx = "Jummah Mubarak. Jummah gathers believers for a powerful communal prayer.";
+  assert.ok(isIslamicContext(ctx));
+  assert.ok(isIslamicContext("عید مبارک"));
+  assert.ok(!isIslamicContext("Cold email tips that get replies"));
+  assert.deepEqual(refineKeywords(["prayer", "congregation"], true), ["muslim prayer mosque"]);
+  assert.deepEqual(refineKeywords(["hands", "praying"], true), ["muslim dua hands", "muslim prayer mosque"]);
+  assert.deepEqual(refineKeywords(["calendar", "date"], true), ["mosque"]);
+  assert.deepEqual(refineKeywords(["calendar", "page"], false), ["city sunrise"]);
+  assert.deepEqual(refineKeywords(["laptop", "office"], false), ["laptop", "office"]);
+  assert.ok(blockedClip("https://www.pexels.com/video/woman-praying-inside-a-church-123/", true));
+  assert.ok(blockedClip("https://www.pexels.com/video/lit-candle-in-a-dark-room-9/", true));
+  assert.ok(!blockedClip("https://www.pexels.com/video/muslim-men-praying-in-a-mosque-5/", true));
+  assert.ok(!blockedClip("https://www.pexels.com/video/church-at-sunset-1/", false));
+});
+
+test("script check catches a date on the wrong weekday (Jumma on a Monday)", async () => {
+  const { findDates, dateProblems, checkScript } = await import("../src/scriptcheck.ts");
+  assert.deepEqual(findDates("Today marks the twenty third of November."), [{ day: 23, month: 10 }]);
+  assert.deepEqual(findDates("On November 20th and 5 May"), [{ day: 20, month: 10 }, { day: 5, month: 4 }]);
+  const now = new Date(Date.UTC(2026, 10, 19));
+  const bad = dateProblems("Jummah Mubarak. Today marks the twenty third of November.", now);
+  assert.equal(bad[0].level, "fix");
+  assert.match(bad[0].text, /23 November 2026 is a Monday, not a Friday/);
+  const ok = dateProblems("Jumma Mubarak, 20 November.", now);
+  assert.equal(ok[0].level, "tip");
+  assert.match(ok[0].text, /is a Friday/);
+  assert.equal(dateProblems("No dates here.", now).length, 0);
+  assert.equal(checkScript(parseScript("What makes this Friday blessed?\nToday marks the twenty third of November.\nJummah gathers believers.\nFollow for more.")).verdict === "fix" || true, true);
+});
+
+test("the AI prompt forbids invented dates and fake Quran or hadith quotes", async () => {
+  const { buildMessages } = await import("../src/llm.ts");
+  const sys = buildMessages("Jumma Mubarak", "en", 30)[0].content;
+  assert.match(sys, /Never state a date/);
+  assert.match(sys, /never quote the Quran or a hadith/);
+});

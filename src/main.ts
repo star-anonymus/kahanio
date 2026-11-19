@@ -56,7 +56,7 @@ export async function runJob(job: Job, onProgress: (f: number, label: string) =>
     for (let i = 0; i < job.scenes.length; i++) {
       onProgress(0.01, `Finding real footage ${i + 1}/${job.scenes.length}`);
       try {
-        const c = await findStockClip(job.scenes[i].keywords, orientation, used, (m) => onProgress(0.01, m));
+        const c = await findStockClip(job.scenes[i].keywords, orientation, used, (m) => onProgress(0.01, m), `${job.topic ?? ""} ${job.scenes.map((x) => x.text).join(" ")}`);
         if (c) used.add(c.id);
         else warnings.push(`No clip found for scene ${i + 1}; it uses the template background.`);
         clips.push(c);

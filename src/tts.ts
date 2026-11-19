@@ -2,6 +2,7 @@
 // Text in Hindi script is converted to Urdu script before an Urdu voice speaks it (captions keep the Hindi).
 // Each scene is spoken separately, so captions match the voice exactly.
 import { ONLINE_VOICES } from "../worker/core.ts";
+import { blockedClip, isIslamicContext, refineKeywords } from "./stockguard.ts";
 import { devanagariToUrdu, hasDevanagari } from "./translit.ts";
 import type { Scene } from "./script.ts";
 
@@ -274,15 +275,26 @@ export async function speakScenes(scenes: Scene[], voice: VoiceOption, onStatus:
 export class StockUnavailable extends Error {}
 
 /** Finds one real clip for a scene. The clip streams through the Worker so the browser may draw it. */
-export async function findStockClip(keywords: string[], orientation: "portrait" | "landscape", used: Set<string>, onStatus: (s: string) => void): Promise<import("./stock.ts").Clip | null> {
+export async function findStockClip(
+  keywords: string[],
+  orientation: "portrait" | "landscape",
+  used: Set<string>,
+  onStatus: (s: string) => void,
+  context = "",
+): Promise<import("./stock.ts").Clip | null> {
   const s = await onlineSession(onStatus);
-  const r = await reach("/stock", { q: keywords.join(" ") || "city", orientation, session: s }, "stock footage");
-  const j = (await r.json().catch(() => ({}))) as { clips?: { id: string; file: string; author: string; page: string }[]; error?: string };
-  if (r.status === 503) throw new StockUnavailable(j.error ?? "Stock footage is not set up yet.");
-  if (!r.ok) throw new Error(j.error ?? `Stock search failed (HTTP ${r.status}).`);
-  const c = (j.clips ?? []).find((x) => !used.has(x.id));
-  if (!c) return null;
-  return { id: c.id, url: `${TTS_URL}/clip?u=${encodeURIComponent(c.file)}&s=${encodeURIComponent(s)}`, credit: { source: "Pexels", author: c.author, url: c.page } };
+  const islamic = isIslamicContext(context + " " + keywords.join(" "));
+  const queries = [refineKeywords(keywords, islamic).join(" ")];
+  if (islamic) queries.push("mosque");
+  for (const q of queries) {
+    const r = await reach("/stock", { q, orientation, session: s }, "stock footage");
+    const j = (await r.json().catch(() => ({}))) as { clips?: { id: string; file: string; author: string; page: string }[]; error?: string };
+    if (r.status === 503) throw new StockUnavailable(j.error ?? "Stock footage is not set up yet.");
+    if (!r.ok) throw new Error(j.error ?? `Stock search failed (HTTP ${r.status}).`);
+    const c = (j.clips ?? []).find((x) => !used.has(x.id) && !blockedClip(x.page, islamic));
+    if (c) return { id: c.id, url: `${TTS_URL}/clip?u=${encodeURIComponent(c.file)}&s=${encodeURIComponent(s)}`, credit: { source: "Pexels", author: c.author, url: c.page } };
+  }
+  return null;
 }
 
 /** Free AI script through our Worker (the owner's free model keys stay on the server). Same bot-check session as the voice. */

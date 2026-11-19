@@ -33,6 +33,9 @@ export function buildMessages(topic: string, lang: ScriptLang, seconds: number, 
       role: "system",
       content:
         "You write scripts for short vertical videos that people watch to the end and share. Facts only: never invent numbers, quotes, prices, results or studies. " +
+        "Never state a date, a day of the month or a year unless the topic gives it. " +
+        "For Islamic topics (Jumma, Eid, Ramzan, dua and so on) use Islamic terms (Allah, dua, masjid), never quote the Quran or a hadith unless the topic gives the exact words, and choose keywords that show Muslim life (mosque, Muslim prayer, dua hands), never other faiths' worship. " +
+        "Never use calendar, date or number as keywords. " +
         VIRAL_RULES.join(" ") +
         " No hashtags, no emojis in the scenes." +
         safe +
