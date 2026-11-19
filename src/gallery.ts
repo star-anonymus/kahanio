@@ -27,19 +27,24 @@ export function buildGallery(onUse: (id: StyleId) => void, onGoal: (g: Goal) => 
     });
   }
 
-  const goals = document.getElementById("goals");
-  if (goals) {
-    goals.innerHTML = GOALS.map(
-      (g) => `
-      <button type="button" class="goal goal-${g.style}" data-goal="${g.id}">
-        <span class="goal-title">${esc(g.title)}</span>
+  // Ideas and occasions share one card design; occasions (Eid, Ramzan, Jumma, 14 August) get their own section.
+  const fill = (el: HTMLElement | null, list: Goal[], hint: string) => {
+    if (!el) return;
+    el.innerHTML = list
+      .map(
+        (g) => `
+      <button type="button" class="goal goal-${g.style}${g.occasion ? " goal-occasion" : ""}" data-goal="${g.id}">
+        <span class="goal-title" ${/[؀-ۿ]/.test(g.title) ? 'dir="rtl" lang="ur"' : ""}>${esc(g.title)}</span>
         <span class="goal-text" ${/[؀-ۿ]/.test(g.text) ? 'dir="rtl" lang="ur"' : ""}>${esc(g.text)}</span>
-        <span class="goal-hint">Picks a template and writes a starter script</span>
+        <span class="goal-hint">${esc(hint)}</span>
         <span class="goal-go">Use this idea →</span>
       </button>`,
-    ).join("");
-    goals.querySelectorAll<HTMLButtonElement>(".goal").forEach((b) => (b.onclick = () => onGoal(GOALS.find((g) => g.id === b.dataset.goal)!)));
-  }
+      )
+      .join("");
+    el.querySelectorAll<HTMLButtonElement>(".goal").forEach((b) => (b.onclick = () => onGoal(GOALS.find((g) => g.id === b.dataset.goal)!)));
+  };
+  fill(document.getElementById("goals"), GOALS.filter((g) => !g.occasion), "Picks a template and writes a starter script");
+  fill(document.getElementById("occasions"), GOALS.filter((g) => g.occasion), "Type your business name, get a greeting video");
 }
 
 export function buildStylePicker(current: () => StyleId, onPick: (id: StyleId) => void) {

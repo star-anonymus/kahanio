@@ -216,7 +216,9 @@ function init() {
         showIdea(
           g.style === "ad"
             ? `✓ ${g.title} chosen. Type your product name above and press Enter, then add its photo in step 2 (Your photos).`
-            : `✓ ${g.title} · ${tName} template chosen. Now type what your video is about, then press Enter.`,
+            : g.occasion
+              ? `✓ ${g.title} chosen. Type your business name above and press Enter.`
+              : `✓ ${g.title} · ${tName} template chosen. Now type what your video is about, then press Enter.`,
         );
         topicBox.classList.add("need");
         setTimeout(() => topicBox.focus({ preventScroll: true }), 400);

@@ -20,7 +20,7 @@ export const TEMPLATES: Template[] = [
 /** The topic is used as a label, so any phrase reads well ("cold email tips", "How to find clients"). */
 const cap = (t: string) => (t.trim() ? t.trim().charAt(0).toUpperCase() + t.trim().slice(1) : "Your topic");
 
-export type Goal = { id: string; title: string; text: string; style: StyleId; format: "9:16" | "16:9"; starter: (topic: string) => string[] };
+export type Goal = { id: string; title: string; text: string; style: StyleId; format: "9:16" | "16:9"; starter: (topic: string) => string[]; occasion?: boolean };
 
 export const GOALS: Goal[] = [
   {
@@ -86,6 +86,52 @@ export const GOALS: Goal[] = [
     style: "neon",
     format: "9:16",
     starter: (t) => [`${cap(t)}: one thought.`, "Small steps, every day.", "Nobody sees the practice.", "Everybody sees the result."],
+  },
+  // ---- Pakistan occasions: the topic box holds the business name; greetings stay Islamic and respectful. ----
+  {
+    id: "eid",
+    title: "Eid Mubarak",
+    text: "A warm Eid greeting from your business.",
+    style: "pop",
+    format: "9:16",
+    occasion: true,
+    starter: (t) => ["Eid Mubarak!", "May this Eid bring peace, joy and blessings to your home.", `With warm wishes from ${cap(t)}.`, "Share this greeting with someone you love."],
+  },
+  {
+    id: "eid-ur",
+    title: "عید مبارک",
+    text: "اردو میں عید کی مبارکباد، آپ کے کاروبار کی طرف سے۔",
+    style: "clean",
+    format: "9:16",
+    occasion: true,
+    starter: (t) => ["عید مبارک!", "اللہ آپ کے گھر میں خوشیاں اور برکتیں لائے۔", `${t.trim() || "ہماری"} کی طرف سے دلی مبارکباد۔`, "یہ پیغام اپنے پیاروں کے ساتھ شیئر کریں۔"],
+  },
+  {
+    id: "ramzan",
+    title: "Ramzan Kareem",
+    text: "A calm Ramzan message for your customers.",
+    style: "clean",
+    format: "9:16",
+    occasion: true,
+    starter: (t) => ["Ramzan Kareem.", "A month of patience, prayer and kindness.", `${cap(t)} wishes you and your family a blessed Ramzan.`, "Remember us in your duas."],
+  },
+  {
+    id: "jumma",
+    title: "Jumma Mubarak",
+    text: "A short Friday greeting, every week.",
+    style: "clean",
+    format: "9:16",
+    occasion: true,
+    starter: (t) => ["Jumma Mubarak.", "Take a moment today for gratitude and dua.", `With best wishes from ${cap(t)}.`, "Share it with your family and friends."],
+  },
+  {
+    id: "azadi",
+    title: "14 August",
+    text: "Independence Day wishes from your team.",
+    style: "pop",
+    format: "9:16",
+    occasion: true,
+    starter: (t) => ["Happy Independence Day, Pakistan!", "Proud of our people, our work and our future.", `${cap(t)} celebrates with you.`, "Pakistan Zindabad!"],
   },
 ];
 
