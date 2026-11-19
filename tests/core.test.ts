@@ -64,6 +64,15 @@ test("captionChunks covers the span with ordered word times", () => {
   for (let i = 1; i < words.length; i++) assert.ok(Math.abs(words[i].start - words[i - 1].end) < 1e-9);
 });
 
+test("captionChunks breaks at punctuation and never ends a group on a joining word", () => {
+  const span = { start: 0, end: 6 };
+  const t = (s: string, n = 4) => captionChunks(s, span, n).map((c) => c.text);
+  assert.deepEqual(t("Turn your Jummah into a day of real peace."), ["Turn your Jummah", "into a day", "of real peace."]);
+  assert.deepEqual(t("Begin with clean wudu, fresh and focused."), ["Begin with clean wudu,", "fresh and focused."]);
+  assert.deepEqual(t("دعا مانگیں، اپنے گھر والوں کو بھی یاد رکھیں۔"), ["دعا مانگیں،", "اپنے گھر والوں", "کو بھی یاد رکھیں۔"]);
+  for (const c of captionChunks("Turn your Jummah into a day of real peace.", span, 4)) assert.doesNotMatch(c.text, /\b(a|into|of)$/);
+});
+
 test("findIndex returns the containing span and clamps at the end", () => {
   const spans = [{ start: 0, end: 2 }, { start: 2, end: 5 }];
   assert.equal(findIndex(spans, 0), 0);
@@ -130,6 +139,10 @@ test("buildMessages asks for facts-only JSON in the chosen language", () => {
   assert.match(m[0].content, /Facts only/);
   assert.match(m[1].content, /Urdu/);
   assert.match(m[1].content, /6 scenes/);
+  assert.match(m[0].content, /word for word/);
+  assert.match(m[0].content, /name the exact word/);
+  assert.match(m[0].content, /no clickbait/);
+  assert.doesNotMatch(buildMessages("cold email", "en", 30)[0].content, /word for word/);
   assert.equal(PROVIDERS.length, 3);
 });
 
@@ -430,6 +443,13 @@ test("stock guard: Islamic topics get Muslim scenes and never other faiths' wors
   assert.deepEqual(refineKeywords(["calendar", "date"], true), ["mosque"]);
   assert.deepEqual(refineKeywords(["calendar", "page"], false), ["city sunrise"]);
   assert.deepEqual(refineKeywords(["laptop", "office"], false), ["laptop", "office"]);
+  // Phrases: each word counts (a Jumma script asked for "holy book", "prayer line", "hands raised", "calendar page").
+  assert.deepEqual(refineKeywords(["holy book"], true), ["quran"]);
+  assert.deepEqual(refineKeywords(["prayer line"], true), ["muslim prayer mosque"]);
+  assert.deepEqual(refineKeywords(["hands raised"], true), ["muslim dua hands"]);
+  assert.deepEqual(refineKeywords(["calendar page"], true), ["mosque"]);
+  assert.deepEqual(refineKeywords(["mosque interior"], true), ["mosque interior"]);
+  assert.deepEqual(refineKeywords(["holy book"], false), ["holy book"]);
   assert.ok(blockedClip("https://www.pexels.com/video/woman-praying-inside-a-church-123/", true));
   assert.ok(blockedClip("https://www.pexels.com/video/lit-candle-in-a-dark-room-9/", true));
   assert.ok(!blockedClip("https://www.pexels.com/video/muslim-men-praying-in-a-mosque-5/", true));

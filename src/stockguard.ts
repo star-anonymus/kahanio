@@ -12,20 +12,26 @@ export function isIslamicContext(text: string): boolean {
 // Words that pull in pictures of dates, numbers or calendars (which then show the wrong date).
 const DATEY = /^(calendar|date|dates|day|page|number|numbers|clock|time|planner|schedule|today)$/i;
 // Worship words that, without context, Pexels mostly answers with churches and candles.
-const WORSHIP = /^(prayer|praying|pray|congregation|worship|faith|blessing|blessings|church|god|lord|hands|candle|spiritual|holy|believers?)$/i;
+const WORSHIP = /^(prayer|prayers|praying|pray|congregation|worship|faith|blessing|blessings|church|god|lord|hands|hand|candle|spiritual|holy|believers?|kneeling|kneel|altar)$/i;
+// "holy book" and "scripture" mostly return Bibles: an Islamic video asks for the Quran by name.
+const BOOKY = /^(book|books|scripture|scriptures|bible|reading|recitation)$/i;
 
-/** Better search words for one scene: Muslim scenes for Islamic topics; no calendar/number footage. */
+/** Better search words for one scene: Muslim scenes for Islamic topics; no calendar/number footage.
+ *  Each keyword may be a phrase ("prayer line", "holy book"): every word in it is checked, not only the whole phrase. */
 export function refineKeywords(keywords: string[], islamic: boolean): string[] {
   const out: string[] = [];
   for (const raw of keywords) {
-    const k = raw.trim().toLowerCase();
-    if (!k) continue;
-    if (DATEY.test(k)) continue;
-    if (islamic && WORSHIP.test(k)) {
-      out.push(k === "hands" ? "muslim dua hands" : "muslim prayer mosque");
+    const words = raw.trim().toLowerCase().split(/\s+/).filter((w) => w && !DATEY.test(w));
+    if (!words.length) continue;
+    if (islamic && words.some((w) => BOOKY.test(w)) && !words.some((w) => /quran|qur'an/.test(w))) {
+      out.push("quran");
       continue;
     }
-    out.push(k);
+    if (islamic && words.some((w) => WORSHIP.test(w))) {
+      out.push(words.some((w) => /^hands?$/.test(w)) ? "muslim dua hands" : "muslim prayer mosque");
+      continue;
+    }
+    out.push(words.join(" "));
   }
   if (islamic && !out.some((k) => /mosque|muslim|quran|masjid|dua|islam/.test(k))) out.unshift("mosque");
   if (!out.length) out.push(islamic ? "mosque" : "city sunrise");

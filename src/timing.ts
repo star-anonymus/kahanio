@@ -43,13 +43,35 @@ export function captionChunks(text: string, span: Span, maxWords = 4): Caption[]
     timed.push({ w, start: t, end: t + d });
     t += d;
   });
-  const out: Caption[] = [];
-  for (let i = 0; i < timed.length; i += maxWords) {
-    const group = timed.slice(i, i + maxWords);
-    out.push({ text: group.map((g) => g.w).join(" "), start: group[0].start, end: group[group.length - 1].end, words: group });
+  // Groups end at punctuation, and never on a small joining word ("Your Jummah into a" once showed alone).
+  const groups: Word[][] = [];
+  let cur: Word[] = [];
+  for (let i = 0; i < timed.length; i++) {
+    cur.push(timed[i]);
+    const last = i === timed.length - 1;
+    if (last) break;
+    if (ENDS_PHRASE.test(timed[i].w)) {
+      groups.push(cur);
+      cur = [];
+    } else if (cur.length >= maxWords) {
+      // Carry trailing joining words over to the next group.
+      let k = cur.length;
+      while (k > 1 && JOINER.test(cur[k - 1].w)) k--;
+      groups.push(cur.slice(0, k));
+      cur = cur.slice(k);
+    }
   }
-  return out;
+  if (cur.length) {
+    // A lone last word joins the group before it, when that keeps the group short.
+    const prev = groups[groups.length - 1];
+    if (cur.length === 1 && prev && prev.length < maxWords + 1 && !ENDS_PHRASE.test(prev[prev.length - 1].w)) prev.push(cur[0]);
+    else groups.push(cur);
+  }
+  return groups.map((g) => ({ text: g.map((x) => x.w).join(" "), start: g[0].start, end: g[g.length - 1].end, words: g }));
 }
+
+const ENDS_PHRASE = /[.,!?;:،؛؟۔।]["')\]]*$/;
+const JOINER = /^(a|an|the|to|of|in|on|at|for|into|with|and|or|but|from|by|your|my|our|their|is|are|کے|کی|کا|کو|سے|میں|اور|پر|کہ|और|के|की|का|को|से|में|पर)$/i;
 
 /** Index of the span that contains time t (the last one once t is past the end). */
 export function findIndex(spans: Span[], t: number): number {

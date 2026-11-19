@@ -18,13 +18,18 @@ export const VIRAL_RULES = [
   "Scene 1 is the hook, under 10 words: a surprising truth, a question the viewer feels, or a bold claim you can back up. Never open with a greeting or \"In this video\".",
   "Scene 2 opens a loop: name the problem or promise what they will get by the end.",
   "Middle scenes give the value: one clear point, step or example per scene, concrete and specific.",
-  "The last scene is a soft call to action: follow, save, comment one word, or try the product. Only one ask.",
+  "The last scene is a soft call to action: follow, save, comment one word, or try the product. Only one ask. If it asks for a comment, name the exact word to write (e.g. comment \"Ameen\").",
   "Talk to one person (\"you\"). Spoken style, short sentences (under 14 words), no filler, no jargon.",
 ];
 
 export function buildMessages(topic: string, lang: ScriptLang, seconds: number, opts: ScriptOptions = {}) {
   const scenes = Math.max(4, Math.min(10, Math.round(seconds / 5)));
   const language = lang === "ur" ? "Urdu in Urdu script" : lang === "hi" ? "everyday spoken Urdu (Hindustani) written in Hindi Devanagari script" : "simple English";
+  // A Jumma script once read like a word-for-word translation ("آج کی تاریخ کے ساتھ ... دریافت کریں", "اللہ سے طلب کریں").
+  const natural =
+    lang === "en"
+      ? ""
+      : " Write the way people in Pakistan speak in a reel: natural, everyday words, complete grammatical sentences. Never translate English phrases word for word (say \"اللہ سے مانگیں\", not \"اللہ سے طلب کریں\"; avoid \"دریافت کریں\").";
   const safe = opts.platformSafe
     ? " Platform-safe: no digits, no prices, no currency, no links or website addresses, no QR codes, no phone numbers (write small numbers as words)."
     : "";
@@ -34,10 +39,12 @@ export function buildMessages(topic: string, lang: ScriptLang, seconds: number, 
       content:
         "You write scripts for short vertical videos that people watch to the end and share. Facts only: never invent numbers, quotes, prices, results or studies. " +
         "Never state a date, a day of the month or a year unless the topic gives it. " +
-        "For Islamic topics (Jumma, Eid, Ramzan, dua and so on) use Islamic terms (Allah, dua, masjid), never quote the Quran or a hadith unless the topic gives the exact words, and choose keywords that show Muslim life (mosque, Muslim prayer, dua hands), never other faiths' worship. " +
+        "For Islamic topics (Jumma, Eid, Ramzan, dua and so on) use Islamic terms (Allah, dua, masjid), never quote the Quran or a hadith unless the topic gives the exact words, and choose keywords that show Muslim life (mosque, Muslim prayer, dua hands, quran), never other faiths' worship. " +
+        "On religious topics no clickbait (no \"secret\", \"raaz\" or \"nobody tells you\"): a sincere question or a reminder is the hook, and mention only well-known practices. " +
         "Never use calendar, date or number as keywords. " +
         VIRAL_RULES.join(" ") +
         " No hashtags, no emojis in the scenes." +
+        natural +
         safe +
         ' Reply with JSON only: {"scenes":[{"text":"...","keywords":["...","..."]}],"caption":"...","hashtags":["...","..."]}. ' +
         'keywords are 1-3 English words for searching stock video (things a camera can film, e.g. "laptop office"). caption is one or two lines for the post, in the same language; hashtags are 3-5 relevant ones without the # sign. ' +
