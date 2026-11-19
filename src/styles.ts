@@ -3,8 +3,9 @@ import { BRAND } from "./brand.ts";
 import { cover, dotGrid, FONT, type Frame, RTL, URDU_FONT, wipe } from "./draw.ts";
 import { clamp01, easeInOutCubic, easeOutBack, easeOutCubic } from "./ease.ts";
 import { type Word, wrapWords } from "./timing.ts";
+import { ctaLabel, isOfferScene } from "./adcopy.ts";
 
-export type StyleId = "story" | "pop" | "clean" | "neon" | "chat" | "news" | "cartoon" | "real";
+export type StyleId = "story" | "pop" | "clean" | "neon" | "chat" | "news" | "cartoon" | "real" | "ad";
 const C = BRAND.colors;
 
 function words(f: Frame): Word[] {
@@ -374,14 +375,14 @@ function news(ctx: CanvasRenderingContext2D, f: Frame, local: number) {
   ctx.restore();
 }
 
-const PAINTERS: Record<Exclude<StyleId, "story">, (ctx: CanvasRenderingContext2D, f: Frame, local: number) => void> = { pop, clean, neon, chat, news, cartoon, real };
+const PAINTERS: Record<Exclude<StyleId, "story">, (ctx: CanvasRenderingContext2D, f: Frame, local: number) => void> = { pop, clean, neon, chat, news, cartoon, real, ad };
 
 export function paintStyle(style: Exclude<StyleId, "story">, ctx: CanvasRenderingContext2D, f: Frame, local: number) {
   ctx.save();
   PAINTERS[style](ctx, f, local);
   ctx.restore();
   const since = f.t - f.sceneStart;
-  if (style !== "pop" && style !== "real" && f.sceneIndex > 0 && since < 0.5) wipe(ctx, f.w, f.h, easeInOutCubic(clamp01(since / 0.5)));
+  if (style !== "pop" && style !== "real" && style !== "ad" && f.sceneIndex > 0 && since < 0.5) wipe(ctx, f.w, f.h, easeInOutCubic(clamp01(since / 0.5)));
 }
 
 // ---- Cartoon: one of our own characters presents the script from a speech bubble, in a flat 2D room. ----
@@ -602,4 +603,159 @@ function real(ctx: CanvasRenderingContext2D, f: Frame, local: number) {
     ctx.fillStyle = `rgba(0,0,0,${dip * 0.85})`;
     ctx.fillRect(0, 0, w, h);
   }
+}
+
+// ---- Product Ad: the product photo full screen with slow 3D motion (from "Your photos"), the product name,
+// an OFFER badge on offer scenes, bold ad copy, and a call-to-action button in the last scene. ----
+function ad(ctx: CanvasRenderingContext2D, f: Frame, local: number) {
+  const { w, h } = f;
+  const u = Math.min(w, h);
+  const C = BRAND.colors;
+  ctx.fillStyle = "#0b0b18";
+  ctx.fillRect(0, 0, w, h);
+  if (f.clip) cover(ctx, f.clip, w, h, 1.0 + 0.03 * easeInOutCubic(local));
+  else {
+    // No photo yet: a studio spotlight and a simple product shape, so the template still reads as an ad.
+    const g = ctx.createRadialGradient(w / 2, h * 0.42, 0, w / 2, h * 0.42, Math.max(w, h) * 0.6);
+    g.addColorStop(0, "#3b2a4d");
+    g.addColorStop(1, "#0b0b18");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
+    const bw = u * 0.34;
+    const bh = u * 0.46;
+    const bob = Math.sin(f.t * 1.4) * u * 0.01;
+    ctx.save();
+    ctx.translate(w / 2, h * 0.42 + bob);
+    ctx.fillStyle = "rgba(0,0,0,0.35)";
+    ctx.beginPath();
+    ctx.ellipse(0, bh / 2 + u * 0.04, bw * 0.6, u * 0.03, 0, 0, Math.PI * 2);
+    ctx.fill();
+    const pg = ctx.createLinearGradient(-bw / 2, 0, bw / 2, 0);
+    pg.addColorStop(0, C.coral);
+    pg.addColorStop(1, "#ff8a5c");
+    ctx.fillStyle = pg;
+    ctx.beginPath();
+    ctx.roundRect(-bw / 2, -bh / 2, bw, bh, u * 0.04);
+    ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,0.85)";
+    ctx.beginPath();
+    ctx.roundRect(-bw / 2 + u * 0.04, -bh / 2 + u * 0.06, bw - u * 0.08, u * 0.05, u * 0.02);
+    ctx.fill();
+    ctx.restore();
+  }
+  // Shades for legibility, top and bottom.
+  const top = ctx.createLinearGradient(0, 0, 0, h * 0.25);
+  top.addColorStop(0, "rgba(0,0,0,0.55)");
+  top.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = top;
+  ctx.fillRect(0, 0, w, h * 0.25);
+  const bot = ctx.createLinearGradient(0, h * 0.5, 0, h);
+  bot.addColorStop(0, "rgba(0,0,0,0)");
+  bot.addColorStop(1, "rgba(0,0,0,0.78)");
+  ctx.fillStyle = bot;
+  ctx.fillRect(0, h * 0.5, w, h * 0.5);
+
+  const since = f.t - f.sceneStart;
+  const sceneText = f.captions.map((c) => c.text).join(" ");
+  const last = f.sceneIndex === f.sceneCount - 1;
+
+  // Product name pill at the top (the topic box holds the product name).
+  if (f.topic) {
+    ctx.save();
+    const s = Math.round(u * 0.04);
+    ctx.font = `800 ${s}px ${FONT}`;
+    const label = f.topic.length > 34 ? f.topic.slice(0, 32) + "…" : f.topic;
+    const tw = ctx.measureText(label).width;
+    const x = (w - tw) / 2 - s * 0.8;
+    const y = u * 0.1;
+    ctx.globalAlpha = easeOutCubic(f.t / 0.6);
+    ctx.fillStyle = "rgba(255,255,255,0.92)";
+    ctx.beginPath();
+    ctx.roundRect(x, y, tw + s * 1.6, s * 1.9, s);
+    ctx.fill();
+    ctx.fillStyle = "#0b0b18";
+    ctx.textBaseline = "middle";
+    ctx.fillText(label, x + s * 0.8, y + s * 0.95);
+    ctx.restore();
+  }
+
+  // OFFER burst on offer scenes.
+  if (isOfferScene(sceneText)) {
+    ctx.save();
+    const r = u * 0.12;
+    const k = easeOutBack(since / 0.4);
+    ctx.translate(w - r * 1.35, h * 0.2);
+    ctx.rotate(-0.25 + Math.sin(f.t * 3) * 0.04);
+    ctx.scale(k, k);
+    ctx.fillStyle = C.amber;
+    ctx.beginPath();
+    for (let i = 0; i < 24; i++) {
+      const a = (i / 24) * Math.PI * 2;
+      const rr = i % 2 ? r * 0.82 : r;
+      ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "#0b0b18";
+    ctx.font = `900 ${Math.round(r * 0.42)}px ${FONT}`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("OFFER", 0, 0);
+    ctx.restore();
+  }
+
+  if (last) {
+    // Call-to-action button with the last scene's words, gently pulsing.
+    ctx.save();
+    const label = ctaLabel(sceneText);
+    const rtl = RTL.test(label);
+    const s = Math.round(u * 0.055);
+    ctx.font = rtl ? `700 ${s}px ${URDU_FONT}` : `800 ${s}px ${FONT}`;
+    const tw = Math.min(ctx.measureText(label + "  →").width, w * 0.82);
+    const bwid = tw + s * 1.6;
+    const bh = s * (rtl ? 2.4 : 2);
+    const pulse = 1 + 0.03 * Math.sin(f.t * 5);
+    const k = easeOutBack(since / 0.5) * pulse;
+    ctx.translate(w / 2, h * 0.78);
+    ctx.scale(k, k);
+    ctx.shadowColor = "rgba(255,77,109,0.6)";
+    ctx.shadowBlur = s * 0.8;
+    ctx.fillStyle = C.coral;
+    ctx.beginPath();
+    ctx.roundRect(-bwid / 2, -bh / 2, bwid, bh, bh / 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = "#fff";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    if (rtl) ctx.direction = "rtl";
+    ctx.fillText(rtl ? label : label + "  →", 0, 0, w * 0.82);
+    ctx.restore();
+    return;
+  }
+
+  // Bold ad copy: the current caption chunk, lower third.
+  const cap = f.captions.find((c) => f.t >= c.start && f.t < c.end) ?? f.captions[f.captions.length - 1];
+  if (!cap) return;
+  const rtl = RTL.test(cap.text);
+  const size = Math.round(u * 0.075);
+  ctx.save();
+  ctx.font = rtl ? `700 ${Math.round(size * 0.85)}px ${URDU_FONT}` : `900 ${size}px ${FONT}`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  if (rtl) ctx.direction = "rtl";
+  const pop = easeOutBack((f.t - cap.start) / 0.25);
+  ctx.globalAlpha = clamp01((f.t - cap.start) / 0.12);
+  ctx.shadowColor = "rgba(0,0,0,0.7)";
+  ctx.shadowBlur = size * 0.4;
+  const lines = rtl ? [[cap.text]] : wrapWords(cap.words.map((x) => x.w.toUpperCase()), w * 0.86, (s) => ctx.measureText(s).width);
+  const lh = size * (rtl ? 1.8 : 1.12);
+  const base = h * 0.76 - ((lines.length - 1) * lh) / 2;
+  ctx.translate(w / 2, base);
+  ctx.scale(0.9 + 0.1 * pop, 0.9 + 0.1 * pop);
+  lines.forEach((l, i) => {
+    ctx.fillStyle = i === 0 ? "#fff" : C.amber;
+    ctx.fillText(l.join(" "), 0, i * lh);
+  });
+  ctx.restore();
 }

@@ -206,13 +206,18 @@ function init() {
       setFormat(g.format);
       const tName = TEMPLATES.find((t) => t.id === g.style)?.name ?? g.style;
       goMake();
+      const photoNote = g.style === "ad" ? " Add your product photo in step 2 (Your photos)." : "";
       if (topicBox.value.trim()) {
         fillIdea(g);
-        showIdea(`✓ Idea loaded: ${g.title} · ${tName} template. Edit the script below, then press Make my video.`);
+        showIdea(`✓ Idea loaded: ${g.title} · ${tName} template.${photoNote} Edit the script, then press Make my video.`);
       } else {
         // No topic yet: ask for it first, then write the starter for that topic (no "your topic" placeholder).
         pendingGoal = g;
-        showIdea(`✓ ${g.title} · ${tName} template chosen. Now type what your video is about, then press Enter.`);
+        showIdea(
+          g.style === "ad"
+            ? `✓ ${g.title} chosen. Type your product name above and press Enter, then add its photo in step 2 (Your photos).`
+            : `✓ ${g.title} · ${tName} template chosen. Now type what your video is about, then press Enter.`,
+        );
         topicBox.classList.add("need");
         setTimeout(() => topicBox.focus({ preventScroll: true }), 400);
       }
@@ -392,6 +397,12 @@ function init() {
     if (!scenes.length) {
       errBox.textContent = "The script is empty. Write one scene per line, or press Get script.";
       errBox.hidden = false;
+      return;
+    }
+    if (style === "ad" && !photoBox.get().length) {
+      errBox.textContent = "The Product Ad template needs your product photo: add it in step 2 (Your photos), then press Make my video.";
+      errBox.hidden = false;
+      document.getElementById("photoFiles")?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
     controller = new AbortController();

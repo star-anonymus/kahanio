@@ -1,11 +1,13 @@
 // The template gallery: visual styles, and goal presets that pick a style plus a starter script.
 import { guessKeywords, type Scene } from "./script.ts";
 import type { StyleId } from "./styles.ts";
+import { adStarter } from "./adcopy.ts";
 
 export type Template = { id: StyleId; name: string; blurb: string; sample: string[] };
 
 export const TEMPLATES: Template[] = [
   { id: "story", name: "Story", blurb: "Story bars, scene numbers, word-by-word captions.", sample: ["Clients are already asking for your service.", "Find them before your competitors do.", "Reply with a real, helpful message."] },
+  { id: "ad", name: "Product Ad", blurb: "Your product photo moving in 3D, ad copy, an offer badge and an order button.", sample: ["New arrival: have you seen it yet?", "Special offer for this week only.", "Order now on WhatsApp."] },
   { id: "real", name: "Real", blurb: "Real footage, full screen, calm film-style captions. No graphics.", sample: ["Every shop on this street has a story.", "Most of them are not online yet.", "A simple website changes that."] },
   { id: "pop", name: "Bold Pop", blurb: "Flat colours and huge words that pop in.", sample: ["Stop scrolling.", "Three tips that get you replies.", "Save this for later."] },
   { id: "clean", name: "Clean", blurb: "Calm cream page, words that darken as they are read.", sample: ["Good work speaks quietly.", "Show one clear result.", "Let the client ask for more."] },
@@ -21,6 +23,14 @@ const cap = (t: string) => (t.trim() ? t.trim().charAt(0).toUpperCase() + t.trim
 export type Goal = { id: string; title: string; text: string; style: StyleId; format: "9:16" | "16:9"; starter: (topic: string) => string[] };
 
 export const GOALS: Goal[] = [
+  {
+    id: "ad",
+    title: "Product ad from a photo",
+    text: "Add your product photo: get a moving ad with an order button.",
+    style: "ad",
+    format: "9:16",
+    starter: (t) => adStarter(t),
+  },
   {
     id: "tips",
     title: "Tips and how-to",

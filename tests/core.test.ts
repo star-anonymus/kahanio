@@ -142,7 +142,7 @@ test("every sample script parses into 5-6 scenes (hero clips: 3) with keywords",
     const scenes = parseScript(s.script);
     const min = f.startsWith("hero-") ? 3 : 5;
     assert.ok(scenes.length >= min && scenes.length <= 6, f);
-    assert.ok(["story", "pop", "clean", "neon", "chat", "news", "cartoon", "real"].includes(s.style), f);
+    assert.ok(["story", "pop", "clean", "neon", "chat", "news", "cartoon", "real", "ad"].includes(s.style), f);
     assert.ok(scenes.every((x) => x.keywords.length > 0), f);
   }
 });
@@ -168,7 +168,7 @@ test("easing curves start at 0, end at 1, and clamp", async () => {
 
 test("templates and goals are complete and their starters parse", async () => {
   const { TEMPLATES, GOALS, sampleScenes } = await import("../src/templates.ts");
-  assert.equal(new Set(TEMPLATES.map((t) => t.id)).size, 8);
+  assert.equal(new Set(TEMPLATES.map((t) => t.id)).size, 9);
   for (const t of TEMPLATES) assert.ok(sampleScenes(t).length >= 3, t.id);
   for (const g of GOALS) {
     assert.ok(TEMPLATES.some((t) => t.id === g.style), g.id);
@@ -402,4 +402,19 @@ test("hero chip names the kind of video on screen", async () => {
   assert.equal(heroKind(1), "Real footage");
   assert.equal(heroKind(7), "Cartoon");
   assert.equal(heroKind(13), "Animated templates");
+});
+
+test("product ad: offer scenes, starter script and the button label", async () => {
+  const { isOfferScene, adStarter, ctaLabel, AD_CTAS } = await import("../src/adcopy.ts");
+  assert.ok(isOfferScene("Special offer for this week only."));
+  assert.ok(isOfferScene("20% off today"));
+  assert.ok(isOfferScene("اس ہفتے خاص رعایت"));
+  assert.ok(!isOfferScene("Made with care, ready for every day."));
+  const s = adStarter("handmade leather wallet");
+  assert.equal(s[0], "Handmade leather wallet: have you seen it yet?");
+  assert.equal(s.length, 5);
+  assert.equal(s[4], AD_CTAS[0]);
+  assert.ok(parseScript(s.join("\n")).length === 5);
+  assert.equal(ctaLabel("Order now on WhatsApp."), "Order now on WhatsApp");
+  assert.ok(ctaLabel("x".repeat(80)).length <= 42);
 });
