@@ -160,9 +160,11 @@ export class QuotaError extends Error {}
 async function onlineScene(text: string, voice: string, onStatus: (s: string) => void): Promise<ArrayBuffer> {
   let netFails = 0;
   for (let attempt = 0; attempt < 6; attempt++) {
+    // The bot check runs first and outside the retry below: its own errors (not ticked, expired) must show as they are.
+    const s = await onlineSession(onStatus);
     let r: Response;
     try {
-      r = await reach("/tts", { text, voice, session: await onlineSession(onStatus) }, "voice");
+      r = await reach("/tts", { text, voice, session: s }, "voice");
     } catch (e) {
       // A dropped connection (e.g. the edge timing out while the voice service was busy) is retried like "busy",
       // three times with growing gaps, before the visitor sees an error.
