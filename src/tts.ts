@@ -67,6 +67,15 @@ async function reach(path: string, body: unknown, what: string): Promise<Respons
 
 let session: { token: string; exp: number } | null = null;
 
+/** Plain words for Cloudflare Turnstile error codes (from Cloudflare's client-side error code list). */
+export function turnstileMessage(code: string): string {
+  const c = String(code);
+  if (/^(110100|110110|110200|400020)/.test(c)) return `The bot check is not set up for this address (code ${c}). Please tell us at clientorahq.com.`;
+  if (/^(300|600)/.test(c))
+    return `The bot check could not finish in this browser (code ${c}). An ad blocker or strict privacy setting often causes this: pause it for this site, or try another browser, then press Retry.`;
+  return `The bot check did not load (code ${c}). Press Retry.`;
+}
+
 // A token that arrived after we stopped waiting (the visitor ticked late). Cloudflare tokens live 300 s; reuse it on Retry.
 let lateToken: { t: string; at: number } | null = null;
 
@@ -78,7 +87,7 @@ function turnstileToken(onStatus: (s: string) => void, anchor?: HTMLElement | nu
   }
   return new Promise((resolve, reject) => {
     const run = () => {
-      const w = window as unknown as { turnstile?: { render(el: HTMLElement, o: Record<string, unknown>): string } };
+      const w = window as unknown as { turnstile?: { render(el: HTMLElement, o: Record<string, unknown>): string; reset(id: string): void } };
       let box = document.getElementById("ts-box");
       if (!box) {
         box = document.createElement("div");
@@ -100,8 +109,11 @@ function turnstileToken(onStatus: (s: string) => void, anchor?: HTMLElement | nu
         onStatus("Quick check: tick the box to continue.");
         box!.scrollIntoView({ block: "center", behavior: "smooth" });
       }, 3000);
-      w.turnstile!.render(box, {
+      let resets = 0;
+      let widget = "";
+      widget = w.turnstile!.render(box, {
         sitekey: SITEKEY,
+        // We reset the widget ourselves on a failure (twice), so it never hangs and never loops forever.
         retry: "never",
         "before-interactive-callback": () => {
           onStatus("Quick check: tick the box to continue.");
@@ -114,10 +126,18 @@ function turnstileToken(onStatus: (s: string) => void, anchor?: HTMLElement | nu
           else resolve(t);
         },
         "error-callback": (code: string) => {
+          // Client-side hiccups (e.g. 300030, often caused by a blocker or a slow page) usually pass on a fresh try.
+          if (resets < 2 && widget) {
+            resets++;
+            onStatus("The bot check hiccuped. Trying it again…");
+            setTimeout(() => w.turnstile!.reset(widget), 800);
+            return true;
+          }
           clearTimeout(timer);
           clearTimeout(hint);
           done = true;
-          reject(new Error(`The bot check did not load (code ${code}). Press Retry.`));
+          reject(new Error(turnstileMessage(String(code))));
+          return true;
         },
       });
     };
