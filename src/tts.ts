@@ -61,7 +61,7 @@ async function reach(path: string, body: unknown, what: string): Promise<Respons
   try {
     return await fetch(`${TTS_URL}${path}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   } catch {
-    throw new Error(`Could not reach the ${what} server. Check your connection (or turn off a blocker for kahanio-voice.kahanio-app.workers.dev) and press Retry.`);
+    throw new Error(`Could not reach the ${what} server (${TTS_URL.replace(/^https?:\/\//, "")}). Check your connection or pause an ad blocker for this site, then press Retry.`);
   }
 }
 

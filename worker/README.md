@@ -36,7 +36,7 @@ clips stream through the Worker (only from videos.pexels.com). Every video credi
 ## Connect the site
 Add two public values to the Vercel project `kahanio` (Settings -> Environment Variables, Production), then redeploy:
 ```
-VITE_TTS_URL=https://kahanio-voice.<your-account>.workers.dev
+VITE_TTS_URL=https://kahanio-api.clientorahq.com   (own domain; the workers.dev address also works but blockers often block it)
 VITE_TURNSTILE_SITEKEY=<Turnstile site key>
 ```
 Without them the site hides the online voices: English uses the on-device voice; Urdu and Hindi ask for your own voice.

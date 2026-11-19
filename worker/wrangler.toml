@@ -3,6 +3,12 @@ name = "kahanio-voice"
 main = "index.ts"
 compatibility_date = "2026-11-01"
 
+# Our own domain (clientorahq.com is in the same Cloudflare account). Ad and privacy blockers often block
+# *.workers.dev, which made the page say "could not reach". workers.dev keeps working as a fallback.
+routes = [
+  { pattern = "kahanio-api.clientorahq.com", custom_domain = true }
+]
+
 [vars]
 ALLOWED_ORIGINS = "https://kahanio.clientorahq.com,https://kahanio.vercel.app,http://localhost:4830,http://localhost:4832"
 
