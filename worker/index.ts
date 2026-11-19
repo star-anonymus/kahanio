@@ -151,8 +151,12 @@ async function handle(req: Request, env: Env, cors: Record<string, string>): Pro
       // Start the generation; wait our turn while another one is running (one at a time on this plan).
       // Answer well before the edge gives up (about 100 s): after 60 s say "busy" and let the page retry.
       const deadline = Date.now() + 60000;
+      // Cloudflare allows 50 sub-requests per request on the free plan; going over crashes the Worker (no CORS,
+      // which the page sees as "could not reach"). Keep a budget well under it and answer "busy" instead.
+      let budget = 40;
       let id = "";
-      for (let attempt = 0; attempt < 8 && !id && Date.now() < deadline; attempt++) {
+      for (let attempt = 0; attempt < 6 && !id && Date.now() < deadline && budget > 2; attempt++) {
+        budget--;
         const start = await fame(env, "/tts/generations", { method: "POST", body: JSON.stringify({ text: r.text, voice: voice.fsId }) });
         if (start.status === 202 || start.ok) {
           id = ((await start.json()) as { id?: string }).id ?? "";
@@ -164,8 +168,9 @@ async function handle(req: Request, env: Env, cors: Record<string, string>): Pro
       }
       if (!id) return json({ error: "The voice service is busy. Retrying…", busy: true }, 429, cors);
 
-      while (Date.now() < deadline) {
-        await sleep(1500);
+      while (Date.now() < deadline && budget > 1) {
+        await sleep(2500);
+        budget--;
         const st = (await (await fame(env, `/tts/generations/${id}`)).json().catch(() => ({}))) as { status?: string; failureMessage?: string };
         if (st.status === "completed") {
           const audio = await fame(env, `/tts/generations/${id}/audio`);
