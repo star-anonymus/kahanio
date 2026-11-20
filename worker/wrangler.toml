@@ -21,9 +21,8 @@ name = "LIMITER"
 namespace_id = "1001"
 simple = { limit = 20, period = 60 }
 
-# Required feedback storage. Run `npx.cmd wrangler d1 create kahanio-feedback`, put its database_id here,
-# then remove the # from the four lines below and deploy (see README).
-# [[d1_databases]]
-# binding = "DB"
-# database_name = "kahanio-feedback"
-# database_id = "PASTE-ID-HERE"
+# Required feedback storage (D1, created 20 Nov 2026). The code reads it as env.DB.
+[[d1_databases]]
+binding = "DB"
+database_name = "kahanio-feedback"
+database_id = "a003bf9b-cc27-4a62-8dd0-aeaed15d51d1"
