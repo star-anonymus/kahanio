@@ -33,6 +33,21 @@ npx.cmd wrangler deploy
 Get a free API key at pexels.com/api, then: `npx.cmd wrangler secret put PEXELS_KEY`. Searches are cached for a day;
 clips stream through the Worker (only from videos.pexels.com). Every video credits Pexels and the filmmakers.
 
+## Required feedback (D1 database, free)
+After every video the page asks for a 1-5 rating (required before the next video) and an optional comment.
+One-time setup, in this folder:
+```
+npx.cmd wrangler d1 create kahanio-feedback
+```
+Copy the `database_id` it prints into the `[[d1_databases]]` block of wrangler.toml (it is not a secret), then:
+```
+npx.cmd wrangler d1 execute kahanio-feedback --remote --file=schema.sql
+npx.cmd wrangler secret put ADMIN_KEY
+npx.cmd wrangler deploy
+```
+Read the feedback at https://kahanio-api.clientorahq.com/feedback/view?key=<your ADMIN_KEY> (keep that link private).
+Until the database is connected, answers stay saved in each visitor's browser and are sent later.
+
 ## Connect the site
 Add two public values to the Vercel project `kahanio` (Settings -> Environment Variables, Production), then redeploy:
 ```

@@ -3,12 +3,15 @@
 // 15-minute session token; a per-IP rate limit on top. Nothing is stored.
 // FameSpeak's API is async and allows one generation at a time on the current plan, so this waits its turn,
 // polls until the audio is ready, then streams it back.
-import { corsHeaders, FAMESPEAK_API, isPexelsVideoUrl, ONLINE_VOICES, SCRIPT_MODELS, signSession, validateScript, validateStock, validateTts, verifySession } from "./core.ts";
+import { corsHeaders, FAMESPEAK_API, sameSecret, validateFeedback, isPexelsVideoUrl, ONLINE_VOICES, SCRIPT_MODELS, signSession, validateScript, validateStock, validateTts, verifySession } from "./core.ts";
 import { buildMessages } from "../src/llm.ts";
 import { pexelsSearchUrl, pickPexelsFile, type PexelsVideo } from "../src/stock.ts";
 
 type RateLimiter = { limit(o: { key: string }): Promise<{ success: boolean }> };
+type D1 = { prepare(q: string): { bind(...v: unknown[]): { run(): Promise<unknown>; all<T>(): Promise<{ results: T[] }> }; all<T>(): Promise<{ results: T[] }> } };
 export type Env = {
+  DB?: D1; // [[d1_databases]] binding "DB" (database kahanio-feedback, schema in worker/schema.sql)
+  ADMIN_KEY?: string; // secret: wrangler secret put ADMIN_KEY (opens /feedback/view?key=...)
   FAMESPEAK_KEY: string; // secret: wrangler secret put FAMESPEAK_KEY
   PEXELS_KEY?: string; // secret: wrangler secret put PEXELS_KEY (free key from pexels.com/api)
   GROQ_KEY?: string; // secret: free key from console.groq.com/keys (script writing)
@@ -62,6 +65,19 @@ async function handle(req: Request, env: Env, cors: Record<string, string>): Pro
       h.set("Cross-Origin-Resource-Policy", "cross-origin");
       return new Response(upstream.body, { status: upstream.status, headers: h });
     }
+    // Owner's private view of the feedback: /feedback/view?key=<ADMIN_KEY>
+    if (req.method === "GET" && path === "/feedback/view") {
+      if (!env.ADMIN_KEY || !sameSecret(url.searchParams.get("key") ?? "", env.ADMIN_KEY)) return new Response("Not found.", { status: 404 });
+      if (!env.DB) return new Response("The feedback database is not connected yet.", { status: 503 });
+      const rows = (await env.DB.prepare("SELECT created_at, tool, rating, comment, context, country FROM feedback ORDER BY id DESC LIMIT 300").all<{ created_at: string; tool: string; rating: number; comment: string; context: string; country: string }>()).results;
+      const avg = (await env.DB.prepare("SELECT tool, COUNT(*) n, ROUND(AVG(rating), 2) a FROM feedback GROUP BY tool").all<{ tool: string; n: number; a: number }>()).results;
+      const e = (s: unknown) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
+      const html = `<!doctype html><meta charset="utf-8"><meta name="robots" content="noindex"><title>Kahanio feedback</title>
+<style>body{font:15px system-ui;margin:24px;background:#0c0c1c;color:#fff4e6}table{border-collapse:collapse;width:100%}td,th{border-bottom:1px solid #26264a;padding:6px 8px;text-align:left;vertical-align:top}th{color:#ffb703}.s{color:#ffb703}</style>
+<h1>Feedback</h1><p>${avg.map((a) => `<b>${e(a.tool)}</b>: ${a.n} answers, average ${a.a} ★`).join(" · ") || "No feedback yet."}</p>
+<table><tr><th>Time (UTC)</th><th>Tool</th><th>Rating</th><th>Comment</th><th>Settings</th><th>Country</th></tr>${rows.map((r) => `<tr><td>${e(r.created_at)}</td><td>${e(r.tool)}</td><td class="s">${"★".repeat(r.rating)}</td><td>${e(r.comment)}</td><td>${e(r.context)}</td><td>${e(r.country)}</td></tr>`).join("")}</table>`;
+      return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "X-Robots-Tag": "noindex" } });
+    }
     if (req.method !== "POST") return json({ error: "Not found." }, 404, cors);
 
     if (env.LIMITER) {
@@ -91,6 +107,17 @@ async function handle(req: Request, env: Env, cors: Record<string, string>): Pro
         return json({ error: expired ? "The bot check expired. Press the button again and tick the box." : `The bot check failed${codes ? ` (${codes})` : ""}. Reload and try again.`, codes }, 403, cors);
       }
       return json({ session: await signSession(env.SESSION_SECRET, ip) }, 200, cors);
+    }
+
+    if (path === "/feedback") {
+      const r = validateFeedback(body);
+      if ("error" in r) return json(r, 400, cors);
+      if (!env.DB) return json({ error: "Feedback storage is not set up yet." }, 503, cors);
+      const country = (req as unknown as { cf?: { country?: string } }).cf?.country ?? "";
+      await env.DB.prepare("INSERT INTO feedback (tool, rating, comment, context, country, created_at) VALUES (?, ?, ?, ?, ?, ?)")
+        .bind(r.tool, r.rating, r.comment, r.context, country, new Date().toISOString())
+        .run();
+      return json({ ok: true }, 200, cors);
     }
 
     if (path === "/stock") {

@@ -1,4 +1,5 @@
 import { decodeVoice } from "./audio.ts";
+import { setupFeedback } from "./feedback-ui.ts";
 import { type Goal, TEMPLATES } from "./templates.ts";
 import { findStockClip, onlineAvailable, StockUnavailable, workerScript } from "./tts.ts";
 import { checkScript, RECIPE, recipeExample } from "./scriptcheck.ts";
@@ -249,6 +250,7 @@ function init() {
   if (!onlineAvailable()) $("stockAutoRow").hidden = true;
   const photoBox = setupPhotos(() => undefined);
   const voiceUi = setupVoice(() => parseScript(scriptBox.value));
+  const fb = setupFeedback();
   if (import.meta.env.DEV) (window as unknown as { __photos?: typeof photoBox }).__photos = photoBox;
   startPreview($<HTMLCanvasElement>("live"), () => {
     const typed = parseScript(scriptBox.value);
@@ -388,6 +390,7 @@ function init() {
 
   let controller: AbortController | null = null;
   const go = async () => {
+    if (fb.blocked()) return; // owner rule: a rating for the last video is required first
     const scenes = parseScript(scriptBox.value);
     const errBox = $("error");
     $("status").hidden = false;
@@ -463,6 +466,7 @@ function init() {
       $("statusText").textContent = `Done: ${Math.round(res.seconds)} seconds.`;
       $("result").hidden = false;
       showVideo(true);
+      fb.ask({ template: job.style ?? "story", format: job.format, voice: voiceUi.mode(), lang: (document.getElementById("voiceLang") as HTMLSelectElement | null)?.value });
     } catch (e) {
       errBox.textContent = (e as Error).message || "Something went wrong.";
       errBox.hidden = false;

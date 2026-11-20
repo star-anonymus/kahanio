@@ -477,3 +477,49 @@ test("the AI prompt forbids invented dates and fake Quran or hadith quotes", asy
   assert.match(sys, /Never state a date/);
   assert.match(sys, /never quote the Quran or a hadith/);
 });
+
+test("feedback: rating 1-5 is required, comment optional and trimmed, no personal fields", async () => {
+  const { buildFeedback, MAX_COMMENT } = await import("../src/feedback.ts");
+  assert.ok("error" in buildFeedback(0, "", {}));
+  assert.ok("error" in buildFeedback(6, "", {}));
+  assert.ok("error" in buildFeedback(2.5, "", {}));
+  const p = buildFeedback(4, "  great   tool  ", { template: "story", format: "9:16", voice: "ai", lang: "ur" }, new Date("2026-11-20T10:00:00Z"));
+  assert.ok(!("error" in p));
+  if (!("error" in p)) {
+    assert.deepEqual(p, { tool: "kahanio", rating: 4, comment: "great tool", context: { template: "story", format: "9:16", voice: "ai", lang: "ur" }, at: "2026-11-20T10:00:00.000Z" });
+    assert.deepEqual(Object.keys(p).sort(), ["at", "comment", "context", "rating", "tool"]);
+  }
+  const long = buildFeedback(5, "x".repeat(MAX_COMMENT + 50), {});
+  assert.ok(!("error" in long) && long.comment.length === MAX_COMMENT);
+});
+
+test("feedback: pending blocks until answered; failed sends stay queued and go later", async () => {
+  const f = await import("../src/feedback.ts");
+  const m = new Map<string, string>();
+  const store = { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, v), removeItem: (k: string) => void m.delete(k) };
+  assert.equal(f.pending(store), null);
+  f.markPending(store, { template: "pop" });
+  assert.deepEqual(f.pending(store), { template: "pop" });
+  const p = f.buildFeedback(5, "", { template: "pop" });
+  assert.ok(!("error" in p));
+  if ("error" in p) return;
+  f.clearPending(store);
+  f.queue(store, p);
+  assert.equal(await f.flush(store, async () => false), 0);
+  assert.equal(f.outbox(store).length, 1, "kept after a failed send");
+  assert.equal(await f.flush(store, async () => true), 1);
+  assert.equal(f.outbox(store).length, 0);
+  assert.equal(f.pending(store), null);
+});
+
+test("worker feedback: validates tool and rating, trims comment, keeps only known settings", async () => {
+  const { validateFeedback, sameSecret } = await import("../worker/core.ts");
+  assert.deepEqual(validateFeedback({ tool: "kahanio", rating: 5, comment: "  nice  ", context: { template: "pop", email: "x@y.z" } }), { tool: "kahanio", rating: 5, comment: "nice", context: '{"template":"pop"}' });
+  assert.ok("error" in validateFeedback({ tool: "other", rating: 5 }));
+  assert.ok("error" in validateFeedback({ tool: "kahanio", rating: 0 }));
+  assert.ok("error" in validateFeedback({ tool: "kahanio", rating: "5.5" }));
+  assert.ok("error" in validateFeedback(null));
+  assert.equal(sameSecret("abc", "abc"), true);
+  assert.equal(sameSecret("abc", "abd"), false);
+  assert.equal(sameSecret("", ""), false);
+});

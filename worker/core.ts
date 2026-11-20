@@ -120,3 +120,33 @@ export const SCRIPT_MODELS = [
   { id: "groq", url: "https://api.groq.com/openai/v1/chat/completions", model: "openai/gpt-oss-120b", keyName: "GROQ_KEY", json: true },
   { id: "gemini", url: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", model: "gemini-flash-latest", keyName: "GEMINI_KEY", json: true },
 ] as const;
+
+// ---- Required feedback (owner rule): tool, rating, optional comment, a few settings. No personal data. ----
+export const FEEDBACK_TOOLS = ["kahanio"];
+
+export type FeedbackRow = { tool: string; rating: number; comment: string; context: string };
+
+export function validateFeedback(body: unknown): FeedbackRow | { error: string } {
+  if (!body || typeof body !== "object") return { error: "Bad request." };
+  const b = body as Record<string, unknown>;
+  if (typeof b.tool !== "string" || !FEEDBACK_TOOLS.includes(b.tool)) return { error: "Unknown tool." };
+  const rating = Number(b.rating);
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5) return { error: "Rating must be 1 to 5." };
+  const comment = typeof b.comment === "string" ? b.comment.replace(/\s+/g, " ").trim().slice(0, 500) : "";
+  const ctx: Record<string, string> = {};
+  if (b.context && typeof b.context === "object") {
+    for (const k of ["template", "format", "voice", "lang"]) {
+      const v = (b.context as Record<string, unknown>)[k];
+      if (typeof v === "string" && v) ctx[k] = v.slice(0, 40);
+    }
+  }
+  return { tool: b.tool, rating, comment, context: JSON.stringify(ctx) };
+}
+
+/** Same length and every character equal, without stopping early (for the owner's view key). */
+export function sameSecret(a: string, b: string): boolean {
+  if (!a || !b || a.length !== b.length) return false;
+  let d = 0;
+  for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return d === 0;
+}

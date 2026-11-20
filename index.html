@@ -222,6 +222,27 @@
             <ul id="warnings" class="hint"></ul>
           </section>
 
+          <section id="feedback" class="card fb-card" hidden aria-labelledby="fb-h">
+            <div id="fbForm">
+              <h3 id="fb-h" class="fb-title">How was this video? <span class="hint">Your rating is needed before the next video.</span></h3>
+              <div class="stars" role="radiogroup" aria-label="Rating, 1 to 5 stars">
+                <button type="button" class="star" data-star="1" role="radio" aria-checked="false" aria-label="1 star">★</button>
+                <button type="button" class="star" data-star="2" role="radio" aria-checked="false" aria-label="2 stars">★</button>
+                <button type="button" class="star" data-star="3" role="radio" aria-checked="false" aria-label="3 stars">★</button>
+                <button type="button" class="star" data-star="4" role="radio" aria-checked="false" aria-label="4 stars">★</button>
+                <button type="button" class="star" data-star="5" role="radio" aria-checked="false" aria-label="5 stars">★</button>
+              </div>
+              <label for="fbComment" class="hint">What should we improve? (optional)</label>
+              <textarea id="fbComment" rows="2" maxlength="500"></textarea>
+              <div class="row"><button type="button" id="fbSend" class="primary small">Send feedback</button><span id="fbMsg" class="hint" role="status"></span></div>
+              <p class="hint">We store only your rating, comment and the settings you used. No name or email.</p>
+            </div>
+            <div id="fbDone" hidden>
+              <p id="fbDoneText" class="strong" role="status"></p>
+              <button type="button" id="fbRetry" class="ghost small" hidden>Retry sending</button>
+            </div>
+          </section>
+
           <section id="result" class="card" hidden>
             <div class="row">
               <a id="download" class="primary" download="video.mp4">Download MP4</a>

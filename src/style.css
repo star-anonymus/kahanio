@@ -296,3 +296,12 @@ progress { width: 100%; height: 10px; border-radius: 99px; overflow: hidden; acc
 .sw-ad { background: radial-gradient(circle at 50% 40%, #ff8a5c 0 30%, #3b2a4d 32%); border: 2px solid #ffb703; }
 .goal-occasion { background: linear-gradient(135deg, #0f5132, #198754 60%, #ffb703 140%) !important; color: #fff !important; }
 .goal-occasion .goal-title[lang="ur"] { font-family: "Noto Nastaliq Urdu", serif; line-height: 2; }
+
+/* ---- Required feedback card ---- */
+.fb-card { border-color: var(--coral); box-shadow: 0 0 0 3px rgba(255, 77, 109, 0.15), var(--shadow); }
+.fb-title { margin: 0 0 8px; font-size: 18px; }
+.fb-title .hint { display: block; font-size: 13px; font-weight: 400; }
+.stars { display: flex; gap: 6px; margin: 6px 0 10px; }
+.star { font-size: 30px; line-height: 1; padding: 4px 6px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--field); color: #4a4a6a; cursor: pointer; }
+.star[aria-checked="true"] { color: var(--amber); border-color: var(--amber); }
+.star:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; }
